@@ -1,0 +1,4 @@
+interface:
+  display_name: "Next.js Expert"
+  short_description: "Next.js engineering rules"
+  default_prompt: "Use $next-js-expert when changing the Next.js frontend or backend."

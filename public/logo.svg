@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="emu8086web logo">
+  <rect width="64" height="64" rx="8" fill="#171A12"/>
+  <rect x="4" y="4" width="56" height="56" rx="6" stroke="#3A3F2E" stroke-width="1"/>
+  <!-- chip die -->
+  <rect x="16" y="16" width="32" height="32" rx="2" fill="#0E100B" stroke="#FFB000" stroke-width="1.5"/>
+  <!-- pin traces -->
+  <line x1="32" y1="8" x2="32" y2="16" stroke="#FFB000" stroke-width="2"/>
+  <line x1="32" y1="48" x2="32" y2="56" stroke="#FFB000" stroke-width="2"/>
+  <line x1="8" y1="32" x2="16" y2="32" stroke="#7EE6A8" stroke-width="2"/>
+  <line x1="48" y1="32" x2="56" y2="32" stroke="#7EE6A8" stroke-width="2"/>
+  <!-- 8086 label -->
+  <text x="32" y="30" text-anchor="middle" fill="#FFB000" font-family="monospace" font-size="9" font-weight="700">8086</text>
+  <text x="32" y="42" text-anchor="middle" fill="#7EE6A8" font-family="monospace" font-size="6" font-weight="600">emu</text>
+</svg>

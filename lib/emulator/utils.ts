@@ -1,0 +1,86 @@
+/** Shared parsing and formatting helpers for the emulator. */
+
+export function stripComment(line: string): string {
+  let inStr = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === "'") inStr = !inStr;
+    if (c === ";" && !inStr) return line.slice(0, i);
+  }
+  return line;
+}
+
+export function parseNumber(tok: string): number | null {
+  tok = tok.trim();
+  if (/^'.'$/.test(tok)) return tok.charCodeAt(1);
+  if (/^-?[0-9]+$/.test(tok)) return parseInt(tok, 10);
+  if (/^0x[0-9a-f]+$/i.test(tok)) return parseInt(tok, 16);
+  if (/^[0-9a-f]+h$/i.test(tok)) return parseInt(tok.slice(0, -1), 16);
+  if (/^[0-9]+d$/i.test(tok)) return parseInt(tok.slice(0, -1), 10);
+  if (/^[01]+b$/i.test(tok)) return parseInt(tok.slice(0, -1), 2);
+  return null;
+}
+
+export function splitArgs(s: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let inStr = false;
+  let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === "'") inStr = !inStr;
+    if (!inStr) {
+      if (c === "(") depth++;
+      if (c === ")") depth--;
+    }
+    if (c === "," && !inStr && depth === 0) {
+      out.push(cur);
+      cur = "";
+      continue;
+    }
+    cur += c;
+  }
+  if (cur.trim() !== "") out.push(cur);
+  return out;
+}
+
+export function writeUnit(
+  mem: Uint8Array,
+  addr: number,
+  val: number,
+  size: 1 | 2,
+): void {
+  val = val & (size === 2 ? 0xffff : 0xff);
+  mem[addr] = val & 0xff;
+  if (size === 2) mem[addr + 1] = (val >> 8) & 0xff;
+}
+
+export function parityOf(byte: number): number {
+  let b = byte & 0xff;
+  let ones = 0;
+  while (b) {
+    ones += b & 1;
+    b >>= 1;
+  }
+  return ones % 2 === 0 ? 1 : 0;
+}
+
+export function hex4(v: number): string {
+  return `0x${((v || 0) & 0xffff).toString(16).padStart(4, "0").toUpperCase()}`;
+}
+
+export function hex2(v: number): string {
+  return ((v || 0) & 0xff).toString(16).padStart(2, "0").toUpperCase();
+}
+
+export function encodeProgramToShare(source: string): string {
+  return btoa(unescape(encodeURIComponent(source)));
+}
+
+export function decodeProgramFromShare(encoded: string): string | null {
+  try {
+    return decodeURIComponent(escape(atob(encoded)));
+  } catch {
+    return null;
+  }
+}
