@@ -27,26 +27,34 @@ export function ConsolePanel({
   }, [output]);
 
   return (
-    <div className="flex flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="paneltitle flex items-center justify-between">
         <span>Console output</span>
-        <button type="button" className="text-[10px] text-ink-dim hover:text-amber" onClick={onCopy}>
+        <button
+          type="button"
+          className="text-[10px] text-ink-dim hover:text-amber"
+          onClick={onCopy}
+        >
           Copy
         </button>
       </div>
-      <div className="relative mx-3.5 mb-3.5 overflow-hidden rounded-md border border-[var(--console-border)] bg-[var(--console-bg)] shadow-[inset_0_0_40px_rgba(0,0,0,0.8)]">
+      <div className="crt-shell relative mx-2 mt-2 mb-2 min-h-0 flex-1 overflow-hidden rounded-md border border-[var(--console-border)] bg-[var(--console-bg)] sm:mx-3.5 sm:mt-3 sm:mb-3.5">
         <div
           ref={crtRef}
-          className="crt max-h-[190px] min-h-[120px] overflow-y-auto px-3.5 py-3 font-[family-name:var(--font-vt323)] text-[19px] leading-tight whitespace-pre-wrap text-[var(--console-fg)]"
-          style={{ textShadow: "0 0 6px var(--console-glow)" }}
+          className="crt h-full min-h-[100px] overflow-y-auto px-3 py-2.5 font-[family-name:var(--font-vt323)] text-[18px] leading-tight whitespace-pre-wrap text-[var(--console-fg)] sm:px-3.5 sm:py-3 sm:text-[19px]"
+          style={{ textShadow: "var(--console-text-shadow)" }}
         >
-          {output}
+          {output || (
+            <span className="text-[var(--console-fg)] opacity-40">
+              Ready.
+            </span>
+          )}
           <span className="crt-cursor" />
         </div>
-        <div className="scanlines absolute inset-0" />
+        <div className="scanlines absolute inset-0 rounded-md" />
       </div>
       {waitingForInput && (
-        <div className="mx-3.5 mb-3 flex items-center gap-2">
+        <div className="mx-2 mb-2 flex items-center gap-2 sm:mx-3.5 sm:mb-3">
           <label className="text-xs text-ink-dim">Input:</label>
           <input
             type="text"

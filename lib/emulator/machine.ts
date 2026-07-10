@@ -183,6 +183,17 @@ export class Machine {
     return this.inputQueue.length > 0 ? (this.inputQueue.shift() ?? null) : null;
   }
 
+  peekInputChar(): string | null {
+    return this.inputQueue.length > 0 ? this.inputQueue[0] : null;
+  }
+
+  /** Source line of the last error, if any. */
+  getErrorLine(): number | null {
+    if (!this.err) return null;
+    const m = this.err.match(/\(line\s+(\d+)\)/i);
+    return m ? parseInt(m[1], 10) : this.getCurrentLine();
+  }
+
   operandSize(token: string): 1 | 2 {
     return this.isReg8(token.toLowerCase()) ? 1 : 2;
   }
@@ -243,7 +254,21 @@ export class Machine {
   ): boolean | number {
     const { op, args, rep } = instr;
 
-    if (rep && ["movsb", "movsw", "stosb", "stosw", "lodsb", "lodsw"].includes(op)) {
+    if (
+      rep &&
+      [
+        "movsb",
+        "movsw",
+        "stosb",
+        "stosw",
+        "lodsb",
+        "lodsw",
+        "cmpsb",
+        "cmpsw",
+        "scasb",
+        "scasw",
+      ].includes(op)
+    ) {
       return this.executeStringOp(op, rep);
     }
 
@@ -392,23 +417,228 @@ export class Machine {
         this.flags.CF = a !== 0 ? 1 : 0;
         break;
       }
+      case "adc": {
+        const a = this.readOperand(args[0]);
+        const b = this.readOperand(args[1]);
+        const size = this.operandSize(args[0]);
+        const r = a + b + this.flags.CF;
+        this.writeOperand(args[0], r);
+        setFlagsAfterOp(this.flags, r, size, "add", a, b + this.flags.CF);
+        break;
+      }
+      case "sbb": {
+        const a = this.readOperand(args[0]);
+        const b = this.readOperand(args[1]);
+        const size = this.operandSize(args[0]);
+        const r = a - b - this.flags.CF;
+        this.writeOperand(args[0], r & (size === 2 ? 0xffff : 0xff));
+        setFlagsAfterOp(this.flags, r, size, "sub", a, b + this.flags.CF);
+        break;
+      }
+      case "idiv": {
+        const b = this.readOperand(args[0]);
+        if (b === 0) throw new AsmError("Division by zero");
+        const isByte = this.isReg8(args[0].toLowerCase());
+        if (isByte) {
+          const dividend = (this.reg.ax << 16) >> 16;
+          this.set8("al", Math.trunc(dividend / b) & 0xff);
+          this.set8("ah", Math.trunc(dividend % b) & 0xff);
+        } else {
+          const dividend = (this.reg.dx << 16) | this.reg.ax;
+          const signed = dividend > 0x7fffffff ? dividend - 0x100000000 : dividend;
+          const divisor = (b << 16) >> 16;
+          this.reg.ax = Math.trunc(signed / divisor) & 0xffff;
+          this.reg.dx = Math.trunc(signed % divisor) & 0xffff;
+        }
+        break;
+      }
+      case "sal":
       case "shl": {
         const a = this.readOperand(args[0]);
-        const n = this.readOperand(args[1]);
+        const n = this.readOperand(args[1]) & 0x1f;
         const size = this.operandSize(args[0]);
-        const r = (a << n) & (size === 2 ? 0xffff : 0xff);
+        const mask = size === 2 ? 0xffff : 0xff;
+        const r = (a << n) & mask;
         this.writeOperand(args[0], r);
-        this.flags.ZF = r === 0 ? 1 : 0;
+        if (n > 0) this.flags.CF = (a >> (size * 8 - n)) & 1;
+        setLogicFlags(this.flags, r, size);
+        break;
+      }
+      case "sar": {
+        const a = this.readOperand(args[0]);
+        const n = this.readOperand(args[1]) & 0x1f;
+        const size = this.operandSize(args[0]);
+        const bits = size * 8;
+        const signed = (a << (32 - bits)) >> (32 - bits);
+        const r = (signed >> n) & (size === 2 ? 0xffff : 0xff);
+        this.writeOperand(args[0], r);
+        if (n > 0) this.flags.CF = (signed >> (n - 1)) & 1;
+        setLogicFlags(this.flags, r, size);
+        break;
+      }
+      case "rol": {
+        const a = this.readOperand(args[0]);
+        const n = this.readOperand(args[1]) & 0x1f;
+        const size = this.operandSize(args[0]);
+        const bits = size * 8;
+        const r = ((a << n) | (a >> (bits - n))) & (size === 2 ? 0xffff : 0xff);
+        this.writeOperand(args[0], r);
+        if (n > 0) this.flags.CF = r & 1;
+        break;
+      }
+      case "ror": {
+        const a = this.readOperand(args[0]);
+        const n = this.readOperand(args[1]) & 0x1f;
+        const size = this.operandSize(args[0]);
+        const bits = size * 8;
+        const r = ((a >> n) | (a << (bits - n))) & (size === 2 ? 0xffff : 0xff);
+        this.writeOperand(args[0], r);
+        if (n > 0) this.flags.CF = (r >> (bits - 1)) & 1;
+        break;
+      }
+      case "rcl": {
+        const a = this.readOperand(args[0]);
+        const n = this.readOperand(args[1]) & 0x1f;
+        const size = this.operandSize(args[0]);
+        const bits = size * 8;
+        let val = a;
+        let cf = this.flags.CF;
+        for (let i = 0; i < n; i++) {
+          const newCf = (val >> (bits - 1)) & 1;
+          val = ((val << 1) | cf) & (size === 2 ? 0xffff : 0xff);
+          cf = newCf;
+        }
+        this.writeOperand(args[0], val);
+        this.flags.CF = cf;
+        break;
+      }
+      case "rcr": {
+        const a = this.readOperand(args[0]);
+        const n = this.readOperand(args[1]) & 0x1f;
+        const size = this.operandSize(args[0]);
+        const bits = size * 8;
+        let val = a;
+        let cf = this.flags.CF;
+        for (let i = 0; i < n; i++) {
+          const newCf = val & 1;
+          val = ((cf << (bits - 1)) | (val >> 1)) & (size === 2 ? 0xffff : 0xff);
+          cf = newCf;
+        }
+        this.writeOperand(args[0], val);
+        this.flags.CF = cf;
         break;
       }
       case "shr": {
         const a = this.readOperand(args[0]);
-        const n = this.readOperand(args[1]);
+        const n = this.readOperand(args[1]) & 0x1f;
+        const size = this.operandSize(args[0]);
         const r = a >>> n;
-        this.writeOperand(args[0], r);
-        this.flags.ZF = r === 0 ? 1 : 0;
+        this.writeOperand(args[0], r & (size === 2 ? 0xffff : 0xff));
+        if (n > 0) this.flags.CF = (a >> (n - 1)) & 1;
+        setLogicFlags(this.flags, r, size);
         break;
       }
+      case "aaa": {
+        if ((this.get8("al") & 0x0f) > 9 || this.flags.AF) {
+          this.reg.ax = (this.reg.ax + 0x106) & 0xffff;
+          this.flags.AF = this.flags.CF = 1;
+        } else {
+          this.flags.AF = this.flags.CF = 0;
+        }
+        this.set8("al", this.get8("al") & 0x0f);
+        break;
+      }
+      case "aas": {
+        if ((this.get8("al") & 0x0f) > 9 || this.flags.AF) {
+          this.reg.ax = (this.reg.ax - 0x106) & 0xffff;
+          this.flags.AF = this.flags.CF = 1;
+        } else {
+          this.flags.AF = this.flags.CF = 0;
+        }
+        this.set8("al", this.get8("al") & 0x0f);
+        break;
+      }
+      case "daa": {
+        let al = this.get8("al");
+        if ((al & 0x0f) > 9 || this.flags.AF) {
+          al = (al + 6) & 0xff;
+          this.flags.AF = 1;
+        }
+        if (al > 0x9f || this.flags.CF) {
+          al = (al + 0x60) & 0xff;
+          this.flags.CF = 1;
+        }
+        this.set8("al", al);
+        setLogicFlags(this.flags, al, 1);
+        break;
+      }
+      case "das": {
+        let al = this.get8("al");
+        if ((al & 0x0f) > 9 || this.flags.AF) {
+          al = (al - 6) & 0xff;
+          this.flags.AF = 1;
+        }
+        if (this.get8("al") > 0x9f || this.flags.CF) {
+          al = (al - 0x60) & 0xff;
+          this.flags.CF = 1;
+        }
+        this.set8("al", al);
+        setLogicFlags(this.flags, al, 1);
+        break;
+      }
+      case "aam": {
+        const base = args[0] ? this.readOperand(args[0]) : 10;
+        const al = this.get8("al");
+        this.set8("ah", Math.floor(al / base) & 0xff);
+        this.set8("al", (al % base) & 0xff);
+        setLogicFlags(this.flags, this.get8("al"), 1);
+        break;
+      }
+      case "aad": {
+        const base = args[0] ? this.readOperand(args[0]) : 10;
+        const r = (this.get8("al") + this.get8("ah") * base) & 0xff;
+        this.set8("al", r);
+        this.set8("ah", 0);
+        setLogicFlags(this.flags, r, 1);
+        break;
+      }
+      case "xlat":
+      case "xlatb": {
+        const addr = (this.reg.bx + this.get8("al")) & 0xffff;
+        this.set8("al", this.mem[addr]);
+        break;
+      }
+      case "lds":
+      case "les": {
+        const addr = this.resolveMemOperand(args[1]);
+        if (addr === null) throw new AsmError(`${op.toUpperCase()} needs memory operand`);
+        const off = this.mem[addr] | (this.mem[addr + 1] << 8);
+        const seg = this.mem[addr + 2] | (this.mem[addr + 3] << 8);
+        this.writeOperand(args[0], off);
+        if (op === "lds") this.reg.ds = seg;
+        else this.reg.es = seg;
+        break;
+      }
+      case "cli":
+        this.flags.IF = 0;
+        break;
+      case "sti":
+        this.flags.IF = 1;
+        break;
+      case "hlt":
+        this.halted = true;
+        return false;
+      case "wait":
+      case "fwait":
+      case "lock":
+        break;
+      case "in": {
+        // Port I/O stub — returns 0
+        this.writeOperand(args[0], 0);
+        break;
+      }
+      case "out":
+        break;
       case "cbw": {
         const al = this.get8("al");
         this.reg.ax = al >= 0x80 ? 0xff00 | al : al;
@@ -544,6 +774,50 @@ export class Machine {
           return this.ip;
         }
         break;
+      case "js":
+        if (this.flags.SF) {
+          this.jumpTo(args[0]);
+          return this.ip;
+        }
+        break;
+      case "jns":
+        if (!this.flags.SF) {
+          this.jumpTo(args[0]);
+          return this.ip;
+        }
+        break;
+      case "jo":
+        if (this.flags.OF) {
+          this.jumpTo(args[0]);
+          return this.ip;
+        }
+        break;
+      case "jno":
+        if (!this.flags.OF) {
+          this.jumpTo(args[0]);
+          return this.ip;
+        }
+        break;
+      case "jp":
+      case "jpe":
+        if (this.flags.PF) {
+          this.jumpTo(args[0]);
+          return this.ip;
+        }
+        break;
+      case "jnp":
+      case "jpo":
+        if (!this.flags.PF) {
+          this.jumpTo(args[0]);
+          return this.ip;
+        }
+        break;
+      case "jcxz":
+        if (this.reg.cx === 0) {
+          this.jumpTo(args[0]);
+          return this.ip;
+        }
+        break;
       case "loop":
         this.reg.cx = (this.reg.cx - 1) & 0xffff;
         if (this.reg.cx !== 0) {
@@ -585,10 +859,15 @@ export class Machine {
       case "stosw":
       case "lodsb":
       case "lodsw":
-        this.executeStringOp(op);
+      case "cmpsb":
+      case "cmpsw":
+      case "scasb":
+      case "scasw":
+        this.executeStringOp(op, rep);
         break;
       case "int": {
         const n = parseNumber(args[0]) ?? parseInt(args[0], 16);
+        if (Number.isNaN(n)) throw new AsmError(`Bad interrupt number "${args[0]}"`, instr.ln);
         const ctx = {
           get8: (r: Reg8Name) => this.get8(r),
           set8: (r: Reg8Name, v: number) => this.set8(r, v),
@@ -600,6 +879,7 @@ export class Machine {
             this.halted = true;
           },
           readInputChar: () => this.readInputChar(),
+          peekInputChar: () => this.peekInputChar(),
           waitingForInput: this.waitingForInput,
         };
         const result = handleInterrupt(n, ctx);
@@ -614,6 +894,15 @@ export class Machine {
         }
         break;
       }
+      case "into":
+        if (this.flags.OF) throw new AsmError("INTO: overflow trap");
+        break;
+      case "iret":
+        if (this.callStack.length === 0) {
+          this.halted = true;
+          return false;
+        }
+        return this.callStack.pop()!;
       default:
         throw new AsmError(`Unsupported instruction "${op.toUpperCase()}"`, instr.ln);
     }
@@ -664,14 +953,40 @@ export class Machine {
           this.reg.si = (this.reg.si + df) & 0xffff;
           break;
         }
+        case "cmpsb":
+        case "cmpsw": {
+          const a =
+            step === 2
+              ? this.mem[this.reg.si] | (this.mem[this.reg.si + 1] << 8)
+              : this.mem[this.reg.si];
+          const b =
+            step === 2
+              ? this.mem[this.reg.di] | (this.mem[this.reg.di + 1] << 8)
+              : this.mem[this.reg.di];
+          setFlagsAfterOp(this.flags, a - b, step as 1 | 2, "cmp", a, b);
+          this.reg.si = (this.reg.si + df) & 0xffff;
+          this.reg.di = (this.reg.di + df) & 0xffff;
+          break;
+        }
+        case "scasb":
+        case "scasw": {
+          const a = step === 2 ? this.reg.ax : this.get8("al");
+          const b =
+            step === 2
+              ? this.mem[this.reg.di] | (this.mem[this.reg.di + 1] << 8)
+              : this.mem[this.reg.di];
+          setFlagsAfterOp(this.flags, a - b, step as 1 | 2, "cmp", a, b);
+          this.reg.di = (this.reg.di + df) & 0xffff;
+          break;
+        }
       }
 
       if (rep) {
         this.reg.cx = (this.reg.cx - 1) & 0xffff;
         if (rep === "repe" || rep === "repz") {
-          if (this.flags.ZF) break;
-        } else if (rep === "repne" || rep === "repnz") {
           if (!this.flags.ZF) break;
+        } else if (rep === "repne" || rep === "repnz") {
+          if (this.flags.ZF) break;
         }
         if (this.reg.cx === 0) break;
       } else {

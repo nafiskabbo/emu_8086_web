@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#0E100B"/>
+  <rect x="80" y="80" width="1040" height="470" rx="16" fill="#171A12" stroke="#3A3F2E" stroke-width="2"/>
+  <rect x="480" y="180" width="240" height="240" rx="12" fill="#0E100B" stroke="#FFB000" stroke-width="4"/>
+  <line x1="600" y1="120" x2="600" y2="180" stroke="#FFB000" stroke-width="6"/>
+  <line x1="600" y1="420" x2="600" y2="480" stroke="#FFB000" stroke-width="6"/>
+  <line x1="400" y1="300" x2="480" y2="300" stroke="#7EE6A8" stroke-width="6"/>
+  <line x1="720" y1="300" x2="800" y2="300" stroke="#7EE6A8" stroke-width="6"/>
+  <text x="600" y="290" text-anchor="middle" fill="#FFB000" font-family="monospace" font-size="56" font-weight="700">8086</text>
+  <text x="600" y="350" text-anchor="middle" fill="#7EE6A8" font-family="monospace" font-size="28" font-weight="600">emu</text>
+  <text x="600" y="520" text-anchor="middle" fill="#CFD6C2" font-family="monospace" font-size="36">emu8086web</text>
+  <text x="600" y="560" text-anchor="middle" fill="#7B8270" font-family="monospace" font-size="20">8086 assembler &amp; emulator in your browser</text>
+</svg>

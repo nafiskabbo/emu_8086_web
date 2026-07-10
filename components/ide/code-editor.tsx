@@ -9,7 +9,11 @@ interface CodeEditorProps {
   breakpoints: Set<number>;
   onToggleBreakpoint: (line: number) => void;
   errorLine: number | null;
+  errorMessage: string | null;
 }
+
+const LINE_H = 20;
+const PAD_Y = 12;
 
 export function CodeEditor({
   source,
@@ -18,6 +22,7 @@ export function CodeEditor({
   breakpoints,
   onToggleBreakpoint,
   errorLine,
+  errorMessage,
 }: CodeEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
@@ -33,17 +38,25 @@ export function CodeEditor({
 
   useEffect(() => {
     syncScroll();
-  }, [currentLine, source, syncScroll]);
+  }, [currentLine, source, errorLine, syncScroll]);
 
-  const handleGutterClick = (line: number) => {
-    onToggleBreakpoint(line);
-  };
+  useEffect(() => {
+    if (errorLine && textareaRef.current) {
+      const y = (errorLine - 1) * LINE_H;
+      textareaRef.current.scrollTop = Math.max(0, y - 80);
+      syncScroll();
+    }
+  }, [errorLine, syncScroll]);
+
+  const shortErr = errorMessage
+    ?.replace(/^Runtime error — /i, "")
+    .replace(/^Assembly error — /i, "");
 
   return (
-    <div className="editor-wrap relative flex min-h-0 flex-1 bg-bg">
+    <div className="editor-wrap relative flex min-h-0 flex-1 overflow-hidden bg-bg">
       <div
         ref={gutterRef}
-        className="gutter w-11 shrink-0 overflow-hidden border-r border-line bg-[var(--gutter-bg)] py-3 pr-1.5 text-right font-mono text-[13px] leading-5 text-ink-dim select-none"
+        className="gutter w-12 shrink-0 overflow-hidden border-r border-line bg-[var(--gutter-bg)] py-3 pr-1.5 text-right font-mono text-[13px] leading-5 text-ink-dim select-none"
         aria-hidden
       >
         {Array.from({ length: lineCount }, (_, i) => {
@@ -54,39 +67,73 @@ export function CodeEditor({
           return (
             <div
               key={line}
-              className={`relative cursor-pointer px-1 hover:text-amber ${isErr ? "text-red" : ""}`}
-              onClick={() => handleGutterClick(line)}
-              title={isBp ? "Remove breakpoint" : "Set breakpoint"}
+              className={`relative h-5 cursor-pointer px-1 hover:text-amber ${
+                isErr ? "font-semibold text-red underline decoration-red" : ""
+              }`}
+              onClick={() => onToggleBreakpoint(line)}
+              title={
+                isErr
+                  ? shortErr ?? "Error on this line"
+                  : isBp
+                    ? "Remove breakpoint"
+                    : "Set breakpoint"
+              }
             >
               {isBp && (
-                <span className="absolute left-0.5 text-red">●</span>
+                <span className="absolute top-0 left-0.5 text-[10px] text-red">
+                  ●
+                </span>
               )}
-              {isCurrent ? "▶" : line}
+              {isErr ? "!" : isCurrent ? "▶" : line}
             </div>
           );
         })}
       </div>
 
-      {currentLine !== null && (
-        <div
-          className="pointer-events-none absolute right-0 left-11 z-0 border-y border-[var(--highlight-border)] bg-[var(--highlight)]"
-          style={{
-            top: 12 + (currentLine - 1) * 20 - scrollTop,
-            height: 20,
-          }}
-        />
-      )}
+      <div className="relative min-h-0 min-w-0 flex-1">
+        {/* Highlights sit under transparent textarea */}
+        {currentLine !== null && (
+          <div
+            className="pointer-events-none absolute right-0 left-0 z-[1] border-y border-[var(--highlight-border)] bg-[var(--highlight)]"
+            style={{
+              top: PAD_Y + (currentLine - 1) * LINE_H - scrollTop,
+              height: LINE_H,
+            }}
+          />
+        )}
+        {errorLine !== null && (
+          <div
+            className="pointer-events-none absolute right-0 left-0 z-[2] border-y-2 border-red bg-[var(--error-line)]"
+            style={{
+              top: PAD_Y + (errorLine - 1) * LINE_H - scrollTop,
+              height: LINE_H,
+            }}
+          />
+        )}
 
-      <textarea
-        ref={textareaRef}
-        value={source}
-        onChange={(e) => onChange(e.target.value)}
-        onScroll={syncScroll}
-        spellCheck={false}
-        className="relative z-10 min-h-0 flex-1 resize-none border-none bg-transparent px-3.5 py-3 font-mono text-[13px] leading-5 text-ink outline-none"
-        style={{ tabSize: 4 }}
-        aria-label="Assembly source code"
-      />
+        <textarea
+          ref={textareaRef}
+          value={source}
+          onChange={(e) => onChange(e.target.value)}
+          onScroll={syncScroll}
+          spellCheck={false}
+          className="relative z-[3] h-full min-h-0 w-full resize-none border-none bg-transparent px-3.5 py-3 font-mono text-[13px] leading-5 text-ink caret-amber outline-none"
+          style={{ tabSize: 4 }}
+          aria-label="Assembly source code"
+        />
+
+        {errorLine !== null && shortErr && (
+          <div
+            className="pointer-events-none absolute right-2 left-2 z-[4] truncate rounded border border-[var(--error-border)] bg-[var(--error-bg)] px-2 py-1 font-mono text-[11px] text-red shadow-md"
+            style={{
+              top: PAD_Y + errorLine * LINE_H - scrollTop + 2,
+            }}
+            title={shortErr}
+          >
+            ✕ {shortErr}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

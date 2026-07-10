@@ -108,12 +108,20 @@ export function useEmulator(initialSource?: string) {
       refresh();
       return true;
     } catch (e) {
-      const err = e as { message?: string; line?: number };
+      const err = e as Error & { line?: number };
+      const line =
+        typeof err.line === "number"
+          ? err.line
+          : (() => {
+              const m = (err.message ?? "").match(/\bline\s+(\d+)\b/i);
+              return m ? parseInt(m[1], 10) : null;
+            })();
+      const msg = err.message ?? "Assembly failed";
       setAssembled(null);
       setMachine(null);
       machineRef.current = null;
-      setAssemblyError(err.message ?? "Assembly failed");
-      setAssemblyErrorLine(err.line ?? null);
+      setAssemblyError(line != null ? `Line ${line}: ${msg}` : msg);
+      setAssemblyErrorLine(line);
       setRunState("error");
       refresh();
       return false;

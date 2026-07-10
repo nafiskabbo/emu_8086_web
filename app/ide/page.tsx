@@ -1,5 +1,6 @@
-import { IdeWorkspace } from "@/components/ide/ide-workspace";
+import { redirect } from "next/navigation";
 
-export default function IdePage() {
-  return <IdeWorkspace />;
+/** Legacy /ide route — IDE now lives at `/`. */
+export default function IdeRedirectPage() {
+  redirect("/");
 }

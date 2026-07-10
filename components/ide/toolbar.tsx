@@ -1,9 +1,10 @@
 "use client";
 
-import type { RunState } from "@/lib/emulator";
-import type { SampleKey } from "@/lib/emulator";
+import type { RunState, SampleKey } from "@/lib/emulator";
 import { SAMPLE_OPTIONS } from "@/lib/emulator";
 import { BrandWordmark } from "@/components/brand/brand-mark";
+import { HelpMenu } from "@/components/ide/help-menu";
+import { APP_VERSION } from "@/lib/version";
 
 interface ToolbarProps {
   runState: RunState;
@@ -11,6 +12,7 @@ interface ToolbarProps {
   isRunning: boolean;
   runSpeed: number;
   theme: "dark" | "light";
+  fileName: string;
   onAssemble: () => void;
   onRun: () => void;
   onPause: () => void;
@@ -19,10 +21,11 @@ interface ToolbarProps {
   onSample: (key: SampleKey) => void;
   onOpen: () => void;
   onSave: () => void;
+  onSaveAs: () => void;
   onShare: () => void;
   onToggleTheme: () => void;
-  onShowShortcuts: () => void;
   onSpeedChange: (ms: number) => void;
+  onOpenSettings: () => void;
 }
 
 const BADGE: Record<RunState, string> = {
@@ -39,6 +42,7 @@ export function Toolbar({
   isRunning,
   runSpeed,
   theme,
+  fileName,
   onAssemble,
   onRun,
   onPause,
@@ -47,22 +51,23 @@ export function Toolbar({
   onSample,
   onOpen,
   onSave,
+  onSaveAs,
   onShare,
   onToggleTheme,
-  onShowShortcuts,
   onSpeedChange,
+  onOpenSettings,
 }: ToolbarProps) {
   return (
-    <header className="flex flex-wrap items-center gap-3 border-b border-line bg-linear-to-b from-[var(--panel)] to-[var(--bg)] px-4 py-2.5">
+    <header className="flex flex-wrap items-center gap-2 border-b border-line bg-linear-to-b from-[var(--panel)] to-[var(--bg)] px-2 py-2 sm:gap-3 sm:px-4 sm:py-2.5">
       <div className="min-w-0">
         <BrandWordmark />
-        <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-ink-dim">
-          8086 assembler & step debugger
+        <p className="mt-0.5 hidden text-[10px] uppercase tracking-[0.14em] text-ink-dim sm:block">
+          v{APP_VERSION} · {fileName || "no file"}
         </p>
       </div>
 
       <select
-        className="rounded border border-line bg-panel-2 px-2 py-2 font-mono text-xs text-ink"
+        className="max-w-[140px] rounded border border-line bg-panel-2 px-2 py-2 font-mono text-xs text-ink sm:max-w-none"
         defaultValue=""
         onChange={(e) => {
           const v = e.target.value as SampleKey;
@@ -70,7 +75,7 @@ export function Toolbar({
           e.target.value = "";
         }}
       >
-        <option value="">Load sample…</option>
+        <option value="">Sample…</option>
         {SAMPLE_OPTIONS.map((s) => (
           <option key={s.key} value={s.key}>
             {s.label}
@@ -78,14 +83,27 @@ export function Toolbar({
         ))}
       </select>
 
-      <div className="ml-auto flex flex-wrap items-center gap-2">
+      <div className="ml-auto flex flex-wrap items-center gap-1.5 sm:gap-2">
         <button type="button" className="btn" onClick={onOpen} title="Open .asm">
           Open
         </button>
-        <button type="button" className="btn" onClick={onSave} title="Save .asm">
+        <button type="button" className="btn" onClick={onSave} title="Save (Ctrl+S)">
           Save
         </button>
-        <button type="button" className="btn" onClick={onShare} title="Copy share link">
+        <button
+          type="button"
+          className="btn hidden sm:inline-flex"
+          onClick={onSaveAs}
+          title="Save as…"
+        >
+          Save as
+        </button>
+        <button
+          type="button"
+          className="btn hidden md:inline-flex"
+          onClick={onShare}
+          title="Copy share link"
+        >
           Share
         </button>
         <div className="hidden h-6 w-px bg-line sm:block" />
@@ -109,7 +127,7 @@ export function Toolbar({
             onClick={onRun}
             title="Run"
           >
-            Run ▶
+            Run
           </button>
         )}
         <button
@@ -119,13 +137,13 @@ export function Toolbar({
           onClick={onStep}
           title="Step (F8)"
         >
-          Step ▸
+          Step
         </button>
         <button type="button" className="btn btn-danger" onClick={onReset} title="Reset">
           Reset
         </button>
-        <div className="hidden h-6 w-px bg-line sm:block" />
-        <label className="hidden items-center gap-2 text-[10px] uppercase tracking-wider text-ink-dim lg:flex">
+        <div className="hidden h-6 w-px bg-line lg:block" />
+        <label className="hidden items-center gap-2 text-[10px] uppercase tracking-wider text-ink-dim xl:flex">
           Speed
           <input
             type="range"
@@ -136,14 +154,7 @@ export function Toolbar({
             className="w-20 accent-amber"
           />
         </label>
-        <button
-          type="button"
-          className="btn btn-icon"
-          onClick={onShowShortcuts}
-          title="Keyboard shortcuts (?)"
-        >
-          ?
-        </button>
+        <HelpMenu onOpenSettings={onOpenSettings} />
         <button
           type="button"
           className="btn btn-icon"

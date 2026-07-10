@@ -56,16 +56,28 @@ interface ErrorBarProps {
 export function ErrorBar({ message, onJump }: ErrorBarProps) {
   if (!message) return null;
   return (
-    <div className="border-t border-[var(--error-border)] bg-[var(--error-bg)] px-3.5 py-2 text-xs text-red">
+    <div
+      className={`shrink-0 border-t border-[var(--error-border)] bg-[var(--error-bg)] px-3.5 py-2 text-xs text-red ${
+        onJump ? "cursor-pointer hover:brightness-110" : ""
+      }`}
+      role={onJump ? "button" : undefined}
+      tabIndex={onJump ? 0 : undefined}
+      onClick={onJump}
+      onKeyDown={
+        onJump
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onJump();
+              }
+            }
+          : undefined
+      }
+      title={onJump ? "Click to jump to error line" : undefined}
+    >
       ✕ {message}
       {onJump && (
-        <button
-          type="button"
-          className="ml-3 underline hover:text-amber"
-          onClick={onJump}
-        >
-          Jump to line
-        </button>
+        <span className="ml-3 underline decoration-red/60">Jump to line</span>
       )}
     </div>
   );

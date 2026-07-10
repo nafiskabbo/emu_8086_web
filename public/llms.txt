@@ -1,0 +1,35 @@
+# emu8086web
+
+> Modern browser-based 8086 microprocessor assembler and step debugger.
+
+## Summary
+
+emu8086web is an open-source web IDE for writing, assembling, and debugging Intel 8086 assembly (MASM-style). It runs entirely in the browser with no install — a modernization of classic emu8086 for all platforms.
+
+## Key features
+
+- Interpretive 8086 assembler and CPU emulator
+- Step / run debugger with breakpoints, registers, flags, memory, and stack views
+- DOS INT 21h and BIOS INT 10h console I/O
+- Multi-file workspace with named save
+- Shareable program links
+- Light and dark themes
+
+## Primary URL
+
+The application root `/` opens the IDE directly.
+
+## Documentation
+
+- README.md — setup and usage
+- docs/emulator.md — instruction and interrupt matrix
+- project.md — product vision and roadmap
+- CONTRIBUTING.md — how to contribute
+
+## Author
+
+Developed by Nafis Islam Kabbo.
+
+## Version
+
+See package.json / lib/version.ts (semver).

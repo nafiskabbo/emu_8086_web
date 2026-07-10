@@ -85,6 +85,7 @@ export interface DosContext {
   print: (text: string) => void;
   halt: () => void;
   readInputChar: () => string | null;
+  peekInputChar: () => string | null;
   waitingForInput: boolean;
 }
 

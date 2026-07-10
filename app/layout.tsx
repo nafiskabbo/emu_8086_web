@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { rootMetadata } from "@/lib/seo";
 import { IBM_Plex_Mono, IBM_Plex_Sans, VT323 } from "next/font/google";
 import "./globals.css";
 
@@ -20,14 +21,7 @@ const vt323 = VT323({
   weight: "400",
 });
 
-export const metadata: Metadata = {
-  title: "emu8086web — 8086 Assembler & Emulator",
-  description:
-    "Browser-based 8086 microprocessor assembler and step debugger. Write, assemble, and run assembly programs entirely in your browser.",
-  icons: {
-    icon: "/logo.svg",
-  },
-};
+export const metadata = rootMetadata;
 
 export default function RootLayout({
   children,
@@ -41,7 +35,19 @@ export default function RootLayout({
       data-theme="dark"
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link
+          rel="alternate"
+          type="text/plain"
+          href="/llms.txt"
+          title="LLM context"
+        />
+      </head>
+      <body className="flex min-h-full flex-col overflow-x-hidden">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

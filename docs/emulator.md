@@ -1,6 +1,6 @@
 # Emulator engine reference
 
-The interpretive 8086 engine lives in `lib/emulator/`. It is framework-agnostic TypeScript with no React dependencies.
+The interpretive 8086 engine lives in `lib/emulator/`. Framework-agnostic TypeScript — no React.
 
 ## Public API
 
@@ -17,89 +17,93 @@ while (!machine.halted) {
 console.log(machine.output);
 ```
 
-### Key modules
-
-| Module | Purpose |
-|--------|---------|
-| `assemble.ts` | Two-pass MASM-style parser → `AssembledProgram` |
-| `machine.ts` | `Machine` class — register file, flags, step execution |
-| `dos.ts` | INT 21h / INT 10h handler dispatch |
-| `flags.ts` | Flag arithmetic after ALU operations |
-| `utils.ts` | Number parsing, hex formatting, share encoding |
-| `samples.ts` | Built-in example programs |
-
 ## Memory model
 
 - 64 KiB flat `Uint8Array`
-- Data variables allocated from offset 0 upward
-- Code is an instruction array (not placed in memory as opcodes)
-- `@data` and `offset label` resolve to data addresses
-- Stack uses `SP` starting at `0xFFFE`, grows downward
+- Data variables from offset 0
+- Code is an instruction array (not machine opcodes in memory)
+- `@data` / `offset label` resolve to data addresses
+- Stack: `SP` starts at `0xFFFE`, grows downward
 
-## Supported instructions
+## Instructions (v1.0)
 
 ### Data transfer
-`mov`, `xchg`, `lea`, `push`, `pop`, `pushf`, `popf`
+`mov`, `xchg`, `lea`, `lds`, `les`, `push`, `pop`, `pushf`, `popf`, `xlat`/`xlatb`, `in`, `out` (stub)
 
 ### Arithmetic
-`add`, `sub`, `inc`, `dec`, `mul`, `imul`, `div`, `neg`, `cmp`, `test`
+`add`, `adc`, `sub`, `sbb`, `inc`, `dec`, `mul`, `imul`, `div`, `idiv`, `neg`, `cmp`, `test`, `aaa`, `aas`, `daa`, `das`, `aam`, `aad`, `cbw`, `cwd`
 
-### Logic
-`and`, `or`, `xor`, `not`, `shl`, `shr`
+### Logic / shift
+`and`, `or`, `xor`, `not`, `shl`/`sal`, `shr`, `sar`, `rol`, `ror`, `rcl`, `rcr`
 
 ### Control flow
-`jmp`, `je`/`jz`, `jne`/`jnz`, `jg`/`jnle`, `jge`/`jnl`, `jl`/`jnge`, `jle`/`jng`, `ja`/`jnbe`, `jae`/`jnb`/`jnc`, `jb`/`jnae`/`jc`, `jbe`/`jna`, `loop`, `loope`/`loopz`, `loopne`/`loopnz`, `call`, `ret`
+`jmp`, `je`/`jz`, `jne`/`jnz`, `jg`/`jnle`, `jge`/`jnl`, `jl`/`jnge`, `jle`/`jng`, `ja`/`jnbe`, `jae`/`jnb`/`jnc`, `jb`/`jnae`/`jc`, `jbe`/`jna`, `js`, `jns`, `jo`, `jno`, `jp`/`jpe`, `jnp`/`jpo`, `jcxz`, `loop`, `loope`/`loopz`, `loopne`/`loopnz`, `call`, `ret`, `iret`
 
-### String (with optional REP prefix)
-`movsb`, `movsw`, `stosb`, `stosw`, `lodsb`, `lodsw`
+### String (optional `rep` / `repe` / `repne`)
+`movsb`, `movsw`, `stosb`, `stosw`, `lodsb`, `lodsw`, `cmpsb`, `cmpsw`, `scasb`, `scasw`
 
-### Other
-`nop`, `int`, `cbw`, `cwd`, `clc`, `stc`, `cmc`, `cld`, `std`, `lahf`, `sahf`
+### Flags / system
+`clc`, `stc`, `cmc`, `cld`, `std`, `cli`, `sti`, `lahf`, `sahf`, `nop`, `hlt`, `wait`, `lock`, `int`, `into`
 
-## Supported interrupts
+## Interrupts
 
 ### INT 21h (DOS)
 
 | AH | Function |
 |----|----------|
-| 01 | Read character with echo |
-| 02 | Write character (`DL`) |
-| 08 | Read character without echo |
-| 09 | Write string (`DS:DX`, `$`-terminated) |
-| 0Ah | Buffered keyboard input |
-| 4Ch | Exit program |
+| 00 / 4Ch | Terminate |
+| 01 | Read char + echo |
+| 02 | Write char (`DL`) |
+| 05 | Printer (→ console) |
+| 06 | Direct console I/O |
+| 07 / 08 | Read char (no echo) |
+| 09 | Write `$`-terminated string |
+| 0Ah | Buffered input |
+| 0Bh | Input status |
+| 0Ch | Flush + input |
+| 25h / 35h | Set/get vector (stub) |
+| 2Ah / 2Ch | Date / time |
+| 30h | DOS version |
+| 3Fh / 40h | Read / write handle (stdin/stdout) |
 
-### INT 10h (BIOS)
+### INT 10h (BIOS video — text)
 
 | AH | Function |
 |----|----------|
-| 0Eh | Teletype output (`AL`) |
+| 00 | Set mode (stub) |
+| 02 / 03 | Cursor (stub) |
+| 06 / 07 | Scroll |
+| 09 / 0A | Write char |
+| 0Eh | Teletype |
+| 13h | Write string |
 
-## Extending the engine
+### INT 16h (keyboard)
 
-### Adding an instruction
+| AH | Function |
+|----|----------|
+| 00 / 10h | Read key |
+| 01 / 11h | Check key |
 
-1. Add parsing support in `assemble.ts` if the syntax is new.
-2. Add a `case` in `Machine.executeInstruction()` in `machine.ts`.
-3. Update this matrix and add a sample program if useful.
+### INT 20h
+Program terminate.
 
-### Adding an interrupt
+## Extending
 
-1. Add handler logic in `dos.ts` (or a new module for non-DOS vectors).
-2. Wire through `handleInterrupt()` in `machine.ts` `int` case.
+1. Add a `case` in `Machine.executeInstruction()` (`machine.ts`)
+2. For DOS/BIOS, extend `dos.ts`
+3. Update this matrix
+4. Add a sample in `samples.ts` when useful
 
-## Error handling
+## Errors
 
-- `AsmError` carries an optional `line` number for assembly errors.
-- Runtime errors set `machine.err` and halt execution.
-- Instruction limit (2M steps) catches infinite loops during Run.
+- `AsmError` may include a source `line`
+- Runtime errors set `machine.err` (includes `(line N)`) and halt
+- Instruction limit (2M) stops infinite Run loops
 
 ## Share encoding
-
-Programs are base64-encoded in the `?p=` query parameter:
 
 ```typescript
 import { encodeProgramToShare, decodeProgramFromShare } from "@/lib/emulator";
 ```
 
-Keep shared programs under ~8 KB for practical URL lengths.
+Programs are base64-encoded in `?p=` query params.

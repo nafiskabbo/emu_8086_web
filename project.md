@@ -1,71 +1,65 @@
 # emu8086web
 
-A browser-based 8086 microprocessor assembler and step debugger — inspired by the classic emu8086 Windows application, rebuilt for the web.
+A browser-based 8086 microprocessor assembler and step debugger — inspired by the classic emu8086 Windows application, rebuilt for the web by **Nafis Islam Kabbo**.
+
+**Version:** 1.0.0
 
 ## Goals
 
-- Teach 8086 assembly in classrooms without requiring a Windows install
-- Mirror the familiar emu8086 workflow: write source, compile, step/run, inspect registers and memory
-- Run entirely client-side — no server, no accounts, no setup beyond a browser
+- Teach 8086 assembly without requiring a Windows install
+- Mirror the familiar emu8086 workflow on every platform (desktop & mobile browsers)
+- Run entirely client-side — no server required for the core IDE
 
 ## Audience
 
 - Computer architecture and assembly language students
 - Instructors who previously relied on emu8086 for lab assignments
-- Self-learners exploring x86 fundamentals
+- Open-source contributors expanding instruction / I/O coverage
 
 ## Feature matrix
 
-| Feature | Classic emu8086 | emu8086web MVP | Planned |
+| Feature | Classic emu8086 | emu8086web 1.0 | Planned |
 |---------|-----------------|----------------|---------|
 | MASM-style `.asm` source | Yes | Yes | — |
-| Compile / Assemble | Yes | Yes | — |
-| Step / Run / Reset | Yes | Yes | — |
-| Registers & flags view | Yes | Yes | — |
-| Data segment variables | Yes | Yes | — |
-| Stack view | Yes | Yes | Call stack added |
-| Console I/O (INT 21h) | Yes | Partial (AH=1,2,8,9,0Ah,4Ch) | Full DOS subset |
-| BIOS teletype (INT 10h) | Yes | AH=0Eh | Graphics modes |
+| Compile / Step / Run | Yes | Yes | — |
+| Multi-file workspace | Limited | Yes | — |
+| Named save | Yes | Yes | — |
+| Registers & flags | Yes | Yes | — |
+| Memory dump | Yes | Yes | — |
+| Console I/O (INT 21h/10h/16h) | Yes | Broad text I/O | Graphics |
+| Full instruction set | Yes | Broad interpretive set | Gaps filled over time |
 | Breakpoints | Yes | Yes | — |
-| Memory hex dump | Yes | Yes | — |
-| File open/save | Yes | Yes (.asm) | — |
-| Share program link | No | Yes | — |
-| Autosave session | No | Yes | — |
+| Share links | No | Yes | — |
 | Virtual I/O devices | Yes | No | Roadmap |
 | Binary `.com` export | Yes | No | Roadmap |
-| Full instruction set | Yes | Classroom subset | Expand incrementally |
 | Tutorials app | Yes | No | Roadmap |
 
 ## Architecture
 
 ```
-app/                    Next.js routes (landing + IDE)
-components/ide/         Debugger UI (client components)
+app/                    Next.js routes
+components/ide/         Debugger UI
 lib/emulator/           Pure TypeScript assembler + interpreter
-lib/ide/                React hook bridging UI ↔ engine
-public/logo.svg         Brand mark
+lib/ide/                Workspace + React bridge
+public/                 Logo, favicon, llms.txt, manifest
 ```
 
-The emulator is **interpretive**: source is parsed into an instruction list and executed directly. This matches classroom usage and keeps the engine approachable. It does not emit real 8086 machine code.
+Interpretive engine: source → instruction list → execute. Flat teaching memory model (`@data` → 0).
 
-### Flat memory model
+## Non-goals (for now)
 
-Data variables live at offsets starting at 0. Segment registers (`DS`, `ES`, etc.) are displayed but the teaching model treats memory as flat — `@data` resolves to 0. Document this when porting programs that rely on segmented addressing.
-
-## Non-goals (MVP)
-
-- Cycle-accurate or binary-faithful emulation
-- Running arbitrary `.com` / `.exe` files from disk
-- Multi-file projects or cloud sync
-- Graphics modes, mouse, virtual hardware labs
+- Cycle-accurate or binary-faithful `.com` execution
+- Full VGA graphics / mouse labs
+- Cloud accounts
 
 ## Roadmap
 
-1. **Phase 2** — More instructions and addressing modes; INT 10h text modes
-2. **Phase 3** — Virtual I/O devices (LED, 7-segment, stepper)
-3. **Phase 4** — Optional binary encoding layer for advanced labs
-4. **Phase 5** — Embedded tutorial content
+1. Virtual I/O devices
+2. INT 10h graphics modes
+3. Optional binary encoding layer
+4. Embedded tutorials
+5. Fill remaining instruction edge cases from contributor PRs
 
-## Legacy reference
+## License
 
-[`emu8086web.html`](emu8086web.html) is the original single-file prototype. The Next.js app supersedes it; the HTML file is kept for reference.
+MIT — see [LICENSE](LICENSE). Contributions welcome via [CONTRIBUTING.md](CONTRIBUTING.md).
