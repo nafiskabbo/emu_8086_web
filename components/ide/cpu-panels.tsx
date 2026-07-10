@@ -9,6 +9,7 @@ interface ConsolePanelProps {
   waitingForInput: boolean;
   onInput: (char: string) => void;
   onCopy: () => void;
+  theme?: "dark" | "light";
 }
 
 export function ConsolePanel({
@@ -16,6 +17,7 @@ export function ConsolePanel({
   waitingForInput,
   onInput,
   onCopy,
+  theme = "dark",
 }: ConsolePanelProps) {
   const crtRef = useRef<HTMLDivElement>(null);
   const output = machine?.output ?? "";
@@ -51,7 +53,9 @@ export function ConsolePanel({
           )}
           <span className="crt-cursor" />
         </div>
-        <div className="scanlines absolute inset-0 rounded-md" />
+        {theme === "dark" ? (
+          <div className="scanlines absolute inset-0 rounded-md" />
+        ) : null}
       </div>
       {waitingForInput && (
         <div className="mx-2 mb-2 flex items-center gap-2 sm:mx-3.5 sm:mb-3">

@@ -5,7 +5,6 @@ import {
   assemble,
   AUTOSAVE_KEY,
   createMachine,
-  decodeProgramFromShare,
   DEFAULT_SOURCE,
   encodeProgramToShare,
   INSTRUCTION_LIMIT,
@@ -61,23 +60,7 @@ export function useEmulator(initialSource?: string) {
       document.documentElement.setAttribute("data-theme", savedTheme);
       queueMicrotask(() => setTheme(savedTheme));
     }
-
-    const params = new URLSearchParams(window.location.search);
-    const shared = params.get("p");
-    queueMicrotask(() => {
-      if (shared) {
-        const decoded = decodeProgramFromShare(shared);
-        if (decoded) setSource(decoded);
-        else {
-          const saved = localStorage.getItem(AUTOSAVE_KEY);
-          if (saved) setSource(saved);
-        }
-      } else {
-        const saved = localStorage.getItem(AUTOSAVE_KEY);
-        if (saved && !initialSource) setSource(saved);
-      }
-    });
-  }, [initialSource]);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -235,8 +218,7 @@ export function useEmulator(initialSource?: string) {
 
   const shareLink = useCallback(() => {
     const encoded = encodeProgramToShare(source);
-    const url = `${window.location.origin}/ide?p=${encoded}`;
-    return url;
+    return `${window.location.origin}/?p=${encodeURIComponent(encoded)}`;
   }, [source]);
 
   const provideInput = useCallback(

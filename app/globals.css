@@ -43,12 +43,12 @@
   --gutter-bg: #ebede4;
   --highlight: rgba(179, 105, 10, 0.1);
   --highlight-border: rgba(179, 105, 10, 0.45);
-  --console-bg: #1a1c14;
+  --console-bg: #f7f8f2;
   --console-border: #c5c9b5;
-  --console-fg: #e8c56a;
-  --console-glow: rgba(232, 197, 106, 0.35);
-  --console-text-shadow: 0 0 4px rgba(232, 197, 106, 0.25);
-  --console-inset: inset 0 0 24px rgba(0, 0, 0, 0.35);
+  --console-fg: #1c6b45;
+  --console-glow: transparent;
+  --console-text-shadow: none;
+  --console-inset: none;
   --brand-glow: none;
   --led-off: #e4e6dc;
   --led-on: #c8402f;
@@ -134,14 +134,11 @@ body {
 }
 
 [data-theme="light"] .scanlines {
-  background: repeating-linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0) 0px,
-    rgba(0, 0, 0, 0) 2px,
-    rgba(0, 0, 0, 0.12) 3px
-  );
-  mix-blend-mode: normal;
-  opacity: 0.35;
+  display: none !important;
+}
+
+[data-theme="light"] .crt-shell {
+  box-shadow: none;
 }
 
 .crt-shell {

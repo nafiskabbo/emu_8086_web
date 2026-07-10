@@ -29,6 +29,10 @@ import {
 } from "@/lib/ide/workspace-files";
 import type { SampleKey } from "@/lib/emulator";
 import { SAMPLES } from "@/lib/emulator";
+import {
+  clearShareQueryFromUrl,
+  takeSharedSourceFromUrl,
+} from "@/lib/ide/share-boot";
 
 export function IdeWorkspace() {
   const [files, setFiles] = useState<WorkspaceFile[]>(() => [createDefaultFile()]);
@@ -65,15 +69,28 @@ export function IdeWorkspace() {
   }, [active?.id]);
 
   useEffect(() => {
-    const stored = loadFilesFromStorage();
-    queueMicrotask(() => {
-      if (stored) {
-        setFiles(stored.files);
-        setActiveId(stored.activeId);
-        lastSynced.current = null;
-      }
+    const sharedSource = takeSharedSourceFromUrl();
+
+    if (sharedSource) {
+      const file = createDefaultFile("shared.asm");
+      file.content = sharedSource;
+      setFiles([file]);
+      setActiveId(file.id);
+      lastSynced.current = file.id;
+      emu.setSource(sharedSource);
+      clearShareQueryFromUrl();
       setHydrated(true);
-    });
+      return;
+    }
+
+    const stored = loadFilesFromStorage();
+    if (stored) {
+      setFiles(stored.files);
+      setActiveId(stored.activeId);
+      lastSynced.current = null;
+    }
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once on mount
   }, []);
 
   useEffect(() => {
@@ -245,10 +262,15 @@ export function IdeWorkspace() {
   const handleShare = async () => {
     const url = emu.shareLink();
     try {
-      await navigator.clipboard.writeText(url);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        throw new Error("clipboard unavailable");
+      }
       showToast("Share link copied");
     } catch {
-      showToast(url);
+      window.prompt("Copy this share link:", url);
+      showToast("Share link ready");
     }
   };
 
@@ -466,6 +488,7 @@ export function IdeWorkspace() {
                 waitingForInput={machine?.waitingForInput ?? false}
                 onInput={emu.provideInput}
                 onCopy={handleCopyConsole}
+                theme={emu.theme}
               />
             </div>
           </div>

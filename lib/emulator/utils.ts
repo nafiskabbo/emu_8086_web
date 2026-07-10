@@ -74,12 +74,33 @@ export function hex2(v: number): string {
 }
 
 export function encodeProgramToShare(source: string): string {
-  return btoa(unescape(encodeURIComponent(source)));
+  const bytes = new TextEncoder().encode(source);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 export function decodeProgramFromShare(encoded: string): string | null {
   try {
-    return decodeURIComponent(escape(atob(encoded)));
+    let raw = encoded.trim();
+    // URLSearchParams usually decodes once; handle leftover encoding / spaces.
+    try {
+      if (/%[0-9A-Fa-f]{2}/.test(raw)) {
+        raw = decodeURIComponent(raw);
+      }
+    } catch {
+      /* keep raw */
+    }
+    let b64 = raw.replace(/ /g, "+").replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4 !== 0) b64 += "=";
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
   } catch {
     return null;
   }

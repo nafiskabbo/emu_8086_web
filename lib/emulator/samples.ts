@@ -18,6 +18,108 @@ main proc
 main endp
 end main`,
 
+  add2: `.model small
+.stack 100h
+.data
+    num1  dw 25
+    num2  dw 17
+    msg   db '25 + 17 = $'
+.code
+main proc
+    mov ax, @data
+    mov ds, ax
+
+    mov ah, 9
+    mov dx, offset msg
+    int 21h
+
+    mov ax, num1
+    add ax, num2
+    call print_ax
+
+    mov ah, 4ch
+    int 21h
+main endp
+
+print_ax proc
+    push ax
+    push bx
+    push cx
+    push dx
+    mov cx, 0
+    mov bx, 10
+divloop:
+    mov dx, 0
+    div bx
+    push dx
+    inc cx
+    cmp ax, 0
+    jne divloop
+outloop:
+    pop dx
+    add dl, '0'
+    mov ah, 2
+    int 21h
+    loop outloop
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+print_ax endp
+end main`,
+
+  multiply: `.model small
+.stack 100h
+.data
+    num1  dw 12
+    num2  dw 7
+    msg   db '12 * 7 = $'
+.code
+main proc
+    mov ax, @data
+    mov ds, ax
+
+    mov ah, 9
+    mov dx, offset msg
+    int 21h
+
+    mov ax, num1
+    mul num2
+    call print_ax
+
+    mov ah, 4ch
+    int 21h
+main endp
+
+print_ax proc
+    push ax
+    push bx
+    push cx
+    push dx
+    mov cx, 0
+    mov bx, 10
+divloop:
+    mov dx, 0
+    div bx
+    push dx
+    inc cx
+    cmp ax, 0
+    jne divloop
+outloop:
+    pop dx
+    add dl, '0'
+    mov ah, 2
+    int 21h
+    loop outloop
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+print_ax endp
+end main`,
+
   sum: `.model small
 .stack 100h
 .data
@@ -163,6 +265,91 @@ print_a_b proc
 print_a_b endp
 end main`,
 
+  largest: `.model small
+.stack 100h
+.data
+    a    dw 34
+    b    dw 89
+    msg  db 'Larger number = $'
+.code
+main proc
+    mov ax, @data
+    mov ds, ax
+
+    mov ah, 9
+    mov dx, offset msg
+    int 21h
+
+    mov ax, a
+    cmp ax, b
+    jge print
+    mov ax, b
+print:
+    call print_ax
+
+    mov ah, 4ch
+    int 21h
+main endp
+
+print_ax proc
+    push ax
+    push bx
+    push cx
+    push dx
+    mov cx, 0
+    mov bx, 10
+divloop:
+    mov dx, 0
+    div bx
+    push dx
+    inc cx
+    cmp ax, 0
+    jne divloop
+outloop:
+    pop dx
+    add dl, '0'
+    mov ah, 2
+    int 21h
+    loop outloop
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+print_ax endp
+end main`,
+
+  echo: `.model small
+.stack 100h
+.data
+    prompt db 'Type a character: $'
+    reply  db 13, 10, 'You typed: $'
+.code
+main proc
+    mov ax, @data
+    mov ds, ax
+
+    mov ah, 9
+    mov dx, offset prompt
+    int 21h
+
+    mov ah, 1
+    int 21h
+    mov bl, al
+
+    mov ah, 9
+    mov dx, offset reply
+    int 21h
+
+    mov dl, bl
+    mov ah, 2
+    int 21h
+
+    mov ah, 4ch
+    int 21h
+main endp
+end main`,
+
   string: `.model small
 .stack 100h
 .data
@@ -188,16 +375,75 @@ main proc
     int 21h
 main endp
 end main`,
+
+  factorial: `.model small
+.stack 100h
+.data
+    n    dw 5
+    msg  db '5! = $'
+.code
+main proc
+    mov ax, @data
+    mov ds, ax
+
+    mov ah, 9
+    mov dx, offset msg
+    int 21h
+
+    mov cx, n
+    mov ax, 1
+fact:
+    mul cx
+    loop fact
+
+    call print_ax
+
+    mov ah, 4ch
+    int 21h
+main endp
+
+print_ax proc
+    push ax
+    push bx
+    push cx
+    push dx
+    mov cx, 0
+    mov bx, 10
+divloop:
+    mov dx, 0
+    div bx
+    push dx
+    inc cx
+    cmp ax, 0
+    jne divloop
+outloop:
+    pop dx
+    add dl, '0'
+    mov ah, 2
+    int 21h
+    loop outloop
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+print_ax endp
+end main`,
 } as const;
 
 export type SampleKey = keyof typeof SAMPLES;
 
 export const SAMPLE_OPTIONS: { key: SampleKey; label: string }[] = [
   { key: "hello", label: "Hello, world" },
+  { key: "add2", label: "Add two numbers" },
+  { key: "multiply", label: "Multiply two numbers" },
   { key: "sum", label: "Sum an array" },
   { key: "loop", label: "Countdown loop" },
+  { key: "largest", label: "Larger of two numbers" },
   { key: "swap", label: "Sort two numbers" },
+  { key: "echo", label: "Read & echo a character" },
   { key: "string", label: "String copy (REP MOVSB)" },
+  { key: "factorial", label: "Factorial (5!)" },
 ];
 
 export const DEFAULT_SOURCE = SAMPLES.hello;
