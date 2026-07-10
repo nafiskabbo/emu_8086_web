@@ -102,11 +102,54 @@ export function HelpMenu({ onOpenSettings }: HelpMenuProps) {
   );
 }
 
+const ASCII_NAMES: Record<number, string> = {
+  0: "NUL",
+  1: "SOH",
+  2: "STX",
+  3: "ETX",
+  4: "EOT",
+  5: "ENQ",
+  6: "ACK",
+  7: "BEL",
+  8: "BS",
+  9: "TAB",
+  10: "LF",
+  11: "VT",
+  12: "FF",
+  13: "CR",
+  14: "SO",
+  15: "SI",
+  16: "DLE",
+  17: "DC1",
+  18: "DC2",
+  19: "DC3",
+  20: "DC4",
+  21: "NAK",
+  22: "SYN",
+  23: "ETB",
+  24: "CAN",
+  25: "EM",
+  26: "SUB",
+  27: "ESC",
+  28: "FS",
+  29: "GS",
+  30: "RS",
+  31: "US",
+  32: "SPACE",
+  127: "DEL",
+};
+
+function asciiLabel(code: number): string {
+  if (ASCII_NAMES[code] !== undefined) return ASCII_NAMES[code]!;
+  if (code > 32 && code < 127) return String.fromCharCode(code);
+  return "·";
+}
+
 function AsciiTable() {
-  const cells = Array.from({ length: 128 }, (_, code) => {
-    const ch = code < 32 || code === 127 ? "·" : String.fromCharCode(code);
-    return { code, ch };
-  });
+  const cells = Array.from({ length: 128 }, (_, code) => ({
+    code,
+    ch: asciiLabel(code),
+  }));
 
   return (
     <>
@@ -114,7 +157,8 @@ function AsciiTable() {
         ASCII codes
       </h2>
       <p className="mt-1 text-sm text-ink-dim">
-        0–127 reference · Dec · Char · Hex
+        0–127 reference · Dec · Char · Hex — control chars use standard names
+        (TAB, SPACE, CR, LF…)
       </p>
       <div className="mt-4 grid grid-cols-2 gap-1.5 font-mono text-xs sm:grid-cols-4 sm:gap-2 sm:text-sm md:grid-cols-6 lg:grid-cols-8">
         {cells.map((c) => (
@@ -123,7 +167,15 @@ function AsciiTable() {
             className="flex items-center justify-between gap-2 rounded border border-line/70 bg-panel-2/40 px-2 py-1.5 sm:px-2.5 sm:py-2"
           >
             <span className="min-w-[2ch] text-amber tabular-nums">{c.code}</span>
-            <span className="min-w-[1.25ch] text-center text-ink">{c.ch}</span>
+            <span
+              className={`min-w-[3.5ch] text-center ${
+                ASCII_NAMES[c.code] !== undefined
+                  ? "text-[10px] tracking-wide text-ink-dim uppercase sm:text-[11px]"
+                  : "text-ink"
+              }`}
+            >
+              {c.ch}
+            </span>
             <span className="text-ink-dim tabular-nums">
               {c.code.toString(16).padStart(2, "0").toUpperCase()}h
             </span>
@@ -162,8 +214,10 @@ function NumberConverter() {
           <Row
             label="ASCII"
             value={
-              n >= 32 && n <= 126
-                ? `'${String.fromCharCode(n)}'`
+              n >= 0 && n <= 127
+                ? ASCII_NAMES[n] !== undefined
+                  ? ASCII_NAMES[n]!
+                  : `'${String.fromCharCode(n)}'`
                 : "—"
             }
           />

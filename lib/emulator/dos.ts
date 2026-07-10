@@ -35,13 +35,13 @@ function handleInt21(ctx: DosContext): DosHandlerResult {
 
     case 0x02: {
       const dl = ctx.get8("dl");
-      ctx.print(String.fromCharCode(dl).replace(/\r/g, "\n"));
+      ctx.print(String.fromCharCode(dl));
       return { handled: true };
     }
 
     case 0x05: {
       const dl = ctx.get8("dl");
-      ctx.print(String.fromCharCode(dl).replace(/\r/g, "\n"));
+      ctx.print(String.fromCharCode(dl));
       return { handled: true };
     }
 
@@ -56,7 +56,7 @@ function handleInt21(ctx: DosContext): DosHandlerResult {
         ctx.set8("al", ch.charCodeAt(0) & 0xff);
         return { handled: true };
       }
-      ctx.print(String.fromCharCode(dl).replace(/\r/g, "\n"));
+      ctx.print(String.fromCharCode(dl));
       return { handled: true };
     }
 
@@ -78,7 +78,7 @@ function handleInt21(ctx: DosContext): DosHandlerResult {
         s += String.fromCharCode(ctx.mem[addr]);
         addr = (addr + 1) & 0xffff;
       }
-      ctx.print(s.replace(/\r\n|\r/g, "\n"));
+      ctx.print(s);
       return { handled: true };
     }
 
@@ -236,12 +236,12 @@ function handleInt10(ctx: DosContext): DosHandlerResult {
     case 0x0a: {
       const al = ctx.get8("al");
       const count = Math.max(1, ctx.reg.cx);
-      ctx.print(String.fromCharCode(al).repeat(count).replace(/\r/g, "\n"));
+      ctx.print(String.fromCharCode(al).repeat(count));
       return { handled: true };
     }
     case 0x0e: {
       const al = ctx.get8("al");
-      ctx.print(String.fromCharCode(al).replace(/\r/g, "\n"));
+      ctx.print(String.fromCharCode(al));
       return { handled: true };
     }
     case 0x13: {
@@ -252,7 +252,7 @@ function handleInt10(ctx: DosContext): DosHandlerResult {
       for (let i = 0; i < len; i++) {
         s += String.fromCharCode(ctx.mem[(addr + i) & 0xffff]);
       }
-      ctx.print(s.replace(/\r\n|\r/g, "\n"));
+      ctx.print(s);
       return { handled: true };
     }
     default:

@@ -27,6 +27,8 @@ export class Machine {
   ip: number;
   halted = false;
   output = "";
+  /** Tracks a bare CR so CRLF from DOS becomes a single newline. */
+  private pendingCR = false;
   callStack: number[] = [];
   dataStack: number[] = [];
   steps = 0;
@@ -171,7 +173,22 @@ export class Machine {
   }
 
   print(str: string): void {
-    this.output += str;
+    for (const ch of str) {
+      if (ch === "\r") {
+        this.pendingCR = true;
+        continue;
+      }
+      if (ch === "\n") {
+        this.pendingCR = false;
+        this.output += "\n";
+        continue;
+      }
+      if (this.pendingCR) {
+        this.output += "\n";
+        this.pendingCR = false;
+      }
+      this.output += ch;
+    }
   }
 
   enqueueInput(char: string): void {
