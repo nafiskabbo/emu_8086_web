@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 
 interface CodeEditorProps {
   source: string;
@@ -14,6 +20,17 @@ interface CodeEditorProps {
 
 const LINE_H = 20;
 const PAD_Y = 12;
+const INDENT = "    ";
+
+/** Inclusive line-block bounds covering the current selection. */
+function selectedLineRange(value: string, start: number, end: number) {
+  const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+  const searchFrom =
+    end > start && value[end - 1] === "\n" ? end - 1 : end;
+  const nextNl = value.indexOf("\n", searchFrom);
+  const lineEnd = nextNl === -1 ? value.length : nextNl;
+  return { lineStart, lineEnd };
+}
 
 export function CodeEditor({
   source,
@@ -51,6 +68,78 @@ export function CodeEditor({
   const shortErr = errorMessage
     ?.replace(/^Runtime error — /i, "")
     .replace(/^Assembly error — /i, "");
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key !== "Tab") return;
+
+      // Keep focus in the editor; insert/outdent instead of cycling panels
+      e.preventDefault();
+      const ta = e.currentTarget;
+      const { selectionStart, selectionEnd, value } = ta;
+
+      if (selectionStart !== selectionEnd || e.shiftKey) {
+        const { lineStart, lineEnd } = selectedLineRange(
+          value,
+          selectionStart,
+          selectionEnd,
+        );
+        const block = value.slice(lineStart, lineEnd);
+        const lines = block.split("\n");
+
+        if (e.shiftKey) {
+          let removedFirst = 0;
+          let removedTotal = 0;
+          const outdented = lines.map((line, i) => {
+            const match = line.match(/^ {1,4}/);
+            if (!match) return line;
+            if (i === 0) removedFirst = match[0].length;
+            removedTotal += match[0].length;
+            return line.slice(match[0].length);
+          });
+          onChange(
+            value.slice(0, lineStart) +
+              outdented.join("\n") +
+              value.slice(lineEnd),
+          );
+          requestAnimationFrame(() => {
+            ta.selectionStart = Math.max(
+              lineStart,
+              selectionStart - removedFirst,
+            );
+            ta.selectionEnd = Math.max(
+              ta.selectionStart,
+              selectionEnd - removedTotal,
+            );
+          });
+          return;
+        }
+
+        const indented = lines.map((line) => INDENT + line).join("\n");
+        onChange(
+          value.slice(0, lineStart) + indented + value.slice(lineEnd),
+        );
+        requestAnimationFrame(() => {
+          ta.selectionStart = selectionStart + INDENT.length;
+          ta.selectionEnd =
+            selectionEnd + INDENT.length * lines.length;
+        });
+        return;
+      }
+
+      onChange(
+        value.slice(0, selectionStart) +
+          INDENT +
+          value.slice(selectionEnd),
+      );
+      requestAnimationFrame(() => {
+        const pos = selectionStart + INDENT.length;
+        ta.selectionStart = pos;
+        ta.selectionEnd = pos;
+      });
+    },
+    [onChange],
+  );
 
   return (
     <div className="editor-wrap relative flex min-h-0 flex-1 overflow-hidden bg-bg">
@@ -115,6 +204,7 @@ export function CodeEditor({
           ref={textareaRef}
           value={source}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
           onScroll={syncScroll}
           spellCheck={false}
           className="relative z-[3] h-full min-h-0 w-full resize-none border-none bg-transparent px-3.5 py-3 font-mono text-[13px] leading-5 text-ink caret-amber outline-none"
