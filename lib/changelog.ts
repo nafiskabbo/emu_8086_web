@@ -8,6 +8,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.2.1",
+    date: "2026-07-24",
+    highlights: [
+      "Open-source GitHub repo link in About / Settings / contacts",
+      "Help menu shows shortcut chords from your scheme prefs",
+      "Custom 404, Google site verification, copy icons beside Copy labels",
+      "Next.js proxy migration (middleware → proxy)",
+    ],
+  },
+  {
     version: "1.2.0",
     date: "2026-07-24",
     highlights: [

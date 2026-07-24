@@ -2,7 +2,7 @@
 
 Browser-based 8086 assembler and step debugger. A modernization of classic emu8086 for every platform — write, assemble, and debug MASM-style assembly entirely in your browser.
 
-**Developed by [Nafis Islam Kabbo](https://nafiskabbo.vercel.app/)** · Version **1.2.0** · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
+**Developed by [Nafis Islam Kabbo](https://nafiskabbo.vercel.app/)** · Version **1.2.1** · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
 - Product: [https://emu8086web.vercel.app](https://emu8086web.vercel.app)
 - Portfolio: [https://nafiskabbo.vercel.app](https://nafiskabbo.vercel.app)

@@ -2,6 +2,21 @@
 
 All notable changes to emu8086web are documented in this file.
 
+## [1.2.1] — 2026-07-24
+
+### Added
+
+- Open-source repo link (`github.com/nafiskabbo/emu_8086_web`) with GitHub icon in About, Settings, and contact links
+- Help menu shows preference-aware shortcut chords beside ASCII / converter / shortcuts
+- Assembly-themed custom 404 page
+- Google Search Console verification meta tag
+- Copy icon beside Copy / Copy error labels (console + error bar)
+
+### Changed
+
+- Migrated Next.js `middleware` → `proxy` convention
+- README logo sized down; contributing points at the GitHub repo
+
 ## [1.2.0] — 2026-07-24
 
 ### Added

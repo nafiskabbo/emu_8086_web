@@ -59,6 +59,10 @@ export default function RootLayout({
           title="Markdown for Agents"
         />
         <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
+        <meta
+          name="google-site-verification"
+          content="4b8J6NrWHLMITLuVCfJLqqXJRMLzERtxpjMp6SKuXpc"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
