@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Machine } from "@/lib/emulator/machine";
 import { hex4 } from "@/lib/emulator";
+import { flagsToWord } from "@/lib/emulator/flags";
+import { DialogShell } from "@/components/ide/dialog-shell";
 
 interface ConsolePanelProps {
   machine: Machine | null;
@@ -121,15 +123,41 @@ export function RegisterPanel({ machine }: RegisterPanelProps) {
   );
 }
 
+const FLAG_MEANINGS: Record<
+  "CF" | "PF" | "AF" | "ZF" | "SF" | "TF" | "IF" | "DF" | "OF",
+  string
+> = {
+  CF: "Carry",
+  PF: "Parity",
+  AF: "Auxiliary carry",
+  ZF: "Zero",
+  SF: "Sign",
+  TF: "Trap",
+  IF: "Interrupt enable",
+  DF: "Direction",
+  OF: "Overflow",
+};
+
 export function FlagsPanel({ machine }: RegisterPanelProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const f = machine?.flags ?? {
     CF: 0, PF: 0, AF: 0, ZF: 0, SF: 0, TF: 0, IF: 1, DF: 0, OF: 0,
   };
   const names = ["CF", "PF", "AF", "ZF", "SF", "TF", "IF", "DF", "OF"] as const;
+  const word = flagsToWord(f);
 
   return (
     <>
-      <div className="paneltitle">Flags register</div>
+      <div className="paneltitle flex items-center justify-between gap-2">
+        <span>Flags register</span>
+        <button
+          type="button"
+          className="text-[10px] text-ink-dim hover:text-amber"
+          onClick={() => setDetailsOpen(true)}
+        >
+          Details
+        </button>
+      </div>
       <div className="flex flex-wrap gap-2.5 border-b border-line bg-panel px-3.5 py-2.5">
         {names.map((n) => (
           <div
@@ -148,6 +176,48 @@ export function FlagsPanel({ machine }: RegisterPanelProps) {
           </div>
         ))}
       </div>
+
+      {detailsOpen && (
+        <DialogShell
+          open={detailsOpen}
+          onClose={() => setDetailsOpen(false)}
+          title="Flags register"
+          panelClassName="max-w-md"
+        >
+          <p className="font-mono text-xs text-ink-dim">
+            FLAGS = {hex4(word)} ·{" "}
+            {word.toString(2).padStart(16, "0").replace(/(.{4})/g, "$1 ").trim()}
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {names.map((n) => (
+              <div
+                key={n}
+                className={`flex items-center justify-between gap-2 rounded border px-3 py-2 ${
+                  f[n]
+                    ? "border-[var(--led-on)]/50 bg-[var(--led-on)]/10"
+                    : "border-line bg-panel-2/40"
+                }`}
+              >
+                <div>
+                  <div className="font-mono text-sm font-semibold text-ink">
+                    {n}
+                  </div>
+                  <div className="text-[11px] text-ink-dim">
+                    {FLAG_MEANINGS[n]}
+                  </div>
+                </div>
+                <span
+                  className={`font-mono text-lg font-bold ${
+                    f[n] ? "text-green" : "text-ink-dim"
+                  }`}
+                >
+                  {f[n]}
+                </span>
+              </div>
+            ))}
+          </div>
+        </DialogShell>
+      )}
     </>
   );
 }

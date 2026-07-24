@@ -101,7 +101,7 @@ function parseDataLine(
       }
       continue;
     }
-    if (/^'.*'$/.test(p)) {
+    if (/^'.*'$/.test(p) || /^".*"$/.test(p)) {
       const str = p.slice(1, -1);
       for (let k = 0; k < str.length; k++) {
         writeUnit(mem, dataPtr, str.charCodeAt(k), unitSize as 1 | 2);
@@ -118,7 +118,7 @@ function parseDataLine(
     }
     const val = parseNumber(p);
     if (val === null)
-      throw new AsmError(`Bad value "${p}" in data declaration`, ln);
+      throw new AsmError(`Bad value \`${p}\` in data declaration`, ln);
     writeUnit(mem, dataPtr, val, unitSize as 1 | 2);
     dataPtr += unitSize;
     count++;

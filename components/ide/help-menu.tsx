@@ -1,19 +1,38 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AdSenseUnit, AD_SLOTS } from "@/components/ads/adsense-unit";
+import { AuthorContacts } from "@/components/ide/author-contacts";
+import { DialogShell } from "@/components/ide/dialog-shell";
+import { ShortcutsHelp } from "@/components/ide/shortcuts-help";
+import { CHANGELOG } from "@/lib/changelog";
 import { APP_AUTHOR, APP_NAME, APP_TAGLINE, APP_VERSION } from "@/lib/version";
 
-type HelpPanel =
+export type HelpPanel =
   | null
   | "menu"
   | "ascii"
   | "convert"
   | "shortcuts"
+  | "changelog"
   | "about";
+
+export const OPEN_HELP_EVENT = "emu8086web:open-help";
 
 interface HelpMenuProps {
   onOpenSettings: () => void;
 }
+
+const PANEL_META: Record<
+  Exclude<HelpPanel, null | "menu">,
+  { title: string; wide?: boolean }
+> = {
+  ascii: { title: "ASCII codes", wide: true },
+  convert: { title: "Number converter" },
+  shortcuts: { title: "Keyboard shortcuts" },
+  changelog: { title: "Changelog" },
+  about: { title: `About ${APP_NAME}` },
+};
 
 export function HelpMenu({ onOpenSettings }: HelpMenuProps) {
   const [panel, setPanel] = useState<HelpPanel>(null);
@@ -23,12 +42,25 @@ export function HelpMenu({ onOpenSettings }: HelpMenuProps) {
     if (!panel) return;
     const onDoc = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setPanel(null);
+        if (panel === "menu") setPanel(null);
       }
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [panel]);
+
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const detail = (e as CustomEvent<{ panel?: HelpPanel }>).detail;
+      setPanel(detail?.panel ?? "shortcuts");
+    };
+    window.addEventListener(OPEN_HELP_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_HELP_EVENT, onOpen);
+  }, []);
+
+  const dialogPanel =
+    panel && panel !== "menu" ? panel : null;
+  const meta = dialogPanel ? PANEL_META[dialogPanel] : null;
 
   return (
     <div ref={rootRef} className="relative">
@@ -48,6 +80,7 @@ export function HelpMenu({ onOpenSettings }: HelpMenuProps) {
               ["ascii", "ASCII codes"],
               ["convert", "Number converter"],
               ["shortcuts", "Keyboard shortcuts"],
+              ["changelog", "Changelog"],
               ["about", "About"],
             ] as const
           ).map(([id, label]) => (
@@ -73,31 +106,29 @@ export function HelpMenu({ onOpenSettings }: HelpMenuProps) {
         </div>
       )}
 
-      {panel && panel !== "menu" && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-3 sm:p-6"
-          onClick={() => setPanel(null)}
-        >
-          <div
-            className={`max-h-[90dvh] w-full overflow-auto border border-line bg-panel p-4 shadow-2xl sm:p-6 ${
-              panel === "ascii" ? "max-w-5xl" : "max-w-lg"
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {panel === "ascii" && <AsciiTable />}
-            {panel === "convert" && <NumberConverter />}
-            {panel === "shortcuts" && <ShortcutsHelp />}
-            {panel === "about" && <AboutPanel />}
-            <button
-              type="button"
-              className="btn mt-4 w-full"
-              onClick={() => setPanel(null)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <DialogShell
+        open={!!dialogPanel}
+        onClose={() => setPanel(null)}
+        title={meta?.title ?? ""}
+        panelClassName={meta?.wide ? "max-w-5xl" : "max-w-lg"}
+        footer={
+          <>
+            <div className="border-t border-line/60 pt-3">
+              <AdSenseUnit
+                key={dialogPanel ?? "none"}
+                slot={AD_SLOTS.banner3}
+                compact
+              />
+            </div>
+          </>
+        }
+      >
+        {dialogPanel === "ascii" && <AsciiTable />}
+        {dialogPanel === "convert" && <NumberConverter />}
+        {dialogPanel === "shortcuts" && <ShortcutsHelp />}
+        {dialogPanel === "changelog" && <ChangelogPanel />}
+        {dialogPanel === "about" && <AboutPanel />}
+      </DialogShell>
     </div>
   );
 }
@@ -153,10 +184,7 @@ function AsciiTable() {
 
   return (
     <>
-      <h2 className="font-mono text-base font-semibold tracking-wider text-amber uppercase sm:text-lg">
-        ASCII codes
-      </h2>
-      <p className="mt-1 text-sm text-ink-dim">
+      <p className="text-sm text-ink-dim">
         0–127 reference · Dec · Char · Hex — control chars use standard names
         (TAB, SPACE, CR, LF…)
       </p>
@@ -188,15 +216,11 @@ function AsciiTable() {
 
 function NumberConverter() {
   const [raw, setRaw] = useState("255");
-  const parsed = parseFlexible(raw);
-  const n = parsed;
+  const n = parseFlexible(raw);
 
   return (
     <>
-      <h2 className="font-mono text-sm font-semibold tracking-wider text-amber uppercase">
-        Number converter
-      </h2>
-      <p className="mt-1 text-xs text-ink-dim">
+      <p className="text-xs text-ink-dim">
         Enter decimal, 0xFF, FFh, 11111111b, or &apos;A&apos;
       </p>
       <input
@@ -240,7 +264,7 @@ function Row({ label, value }: { label: string; value: string }) {
 function parseFlexible(raw: string): number | null {
   const t = raw.trim();
   if (!t) return null;
-  if (/^'.'$/.test(t)) return t.charCodeAt(1);
+  if (/^'.'$/.test(t) || /^"."$/.test(t)) return t.charCodeAt(1);
   if (/^0x[0-9a-f]+$/i.test(t)) return parseInt(t, 16);
   if (/^[0-9a-f]+h$/i.test(t)) return parseInt(t.slice(0, -1), 16);
   if (/^[01]+b$/i.test(t)) return parseInt(t.slice(0, -1), 2);
@@ -248,29 +272,25 @@ function parseFlexible(raw: string): number | null {
   return null;
 }
 
-function ShortcutsHelp() {
-  const items = [
-    ["F5", "Compile / Assemble"],
-    ["F8", "Single step"],
-    ["Esc", "Pause"],
-    ["Ctrl/Cmd+S", "Save active file"],
-    ["?", "Shortcuts"],
-  ];
+function ChangelogPanel() {
   return (
     <>
-      <h2 className="font-mono text-sm font-semibold tracking-wider text-amber uppercase">
-        Keyboard shortcuts
-      </h2>
-      <ul className="mt-4 space-y-2">
-        {items.map(([k, a]) => (
-          <li key={k} className="flex justify-between text-sm">
-            <kbd className="rounded border border-line bg-panel-2 px-2 py-0.5 font-mono text-xs">
-              {k}
-            </kbd>
-            <span className="text-ink-dim">{a}</span>
-          </li>
+      <p className="text-xs text-ink-dim">What&apos;s new in {APP_NAME}</p>
+      <div className="mt-4 space-y-5">
+        {CHANGELOG.map((entry) => (
+          <section key={entry.version}>
+            <h3 className="font-mono text-sm text-ink">
+              v{entry.version}{" "}
+              <span className="text-xs text-ink-dim">· {entry.date}</span>
+            </h3>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-dim">
+              {entry.highlights.map((h) => (
+                <li key={h}>{h}</li>
+              ))}
+            </ul>
+          </section>
         ))}
-      </ul>
+      </div>
     </>
   );
 }
@@ -278,10 +298,7 @@ function ShortcutsHelp() {
 function AboutPanel() {
   return (
     <>
-      <h2 className="font-mono text-sm font-semibold tracking-wider text-amber uppercase">
-        About {APP_NAME}
-      </h2>
-      <p className="mt-3 text-sm text-ink">{APP_TAGLINE}</p>
+      <p className="text-sm text-ink">{APP_TAGLINE}</p>
       <p className="mt-3 text-sm text-ink-dim">
         Tried to modernize classic emu8086 for the browser so students and
         developers can assemble and debug 8086 programs on every platform —
@@ -290,7 +307,14 @@ function AboutPanel() {
       <dl className="mt-4 space-y-2 font-mono text-sm">
         <Row label="Version" value={APP_VERSION} />
         <Row label="Developed by" value={APP_AUTHOR.name} />
+        <Row label="Email" value={APP_AUTHOR.email} />
       </dl>
+      <div className="mt-4">
+        <p className="mb-2 text-xs tracking-wider text-ink-dim uppercase">
+          Connect
+        </p>
+        <AuthorContacts />
+      </div>
     </>
   );
 }

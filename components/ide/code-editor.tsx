@@ -7,6 +7,19 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import {
+  formatAsm,
+  formatAsmSelection,
+  indentAfterEnter,
+} from "@/lib/ide/format-asm";
+import type { TabSize } from "@/lib/ide/editor-prefs";
+import {
+  loadOverrides,
+  loadScheme,
+  matchShortcut,
+  type OverrideMap,
+  type ShortcutScheme,
+} from "@/lib/ide/shortcuts";
 
 interface CodeEditorProps {
   source: string;
@@ -16,13 +29,14 @@ interface CodeEditorProps {
   onToggleBreakpoint: (line: number) => void;
   errorLine: number | null;
   errorMessage: string | null;
+  tabSize?: TabSize;
+  wordWrap?: boolean;
 }
 
 const LINE_H = 20;
 const PAD_Y = 12;
-const INDENT = "    ";
+const HISTORY_LIMIT = 200;
 
-/** Inclusive line-block bounds covering the current selection. */
 function selectedLineRange(value: string, start: number, end: number) {
   const lineStart = value.lastIndexOf("\n", start - 1) + 1;
   const searchFrom =
@@ -40,11 +54,96 @@ export function CodeEditor({
   onToggleBreakpoint,
   errorLine,
   errorMessage,
+  tabSize = 4,
+  wordWrap = false,
 }: CodeEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const lineCount = source.split("\n").length;
+  const indent = " ".repeat(tabSize);
+
+  const historyRef = useRef<string[]>([source]);
+  const histIndexRef = useRef(0);
+  const applyingHistory = useRef(false);
+  const lastSourceRef = useRef(source);
+  const schemeRef = useRef<ShortcutScheme>(loadScheme());
+  const overridesRef = useRef<OverrideMap>(loadOverrides());
+
+  useEffect(() => {
+    schemeRef.current = loadScheme();
+    overridesRef.current = loadOverrides();
+    const onPrefs = () => {
+      schemeRef.current = loadScheme();
+      overridesRef.current = loadOverrides();
+    };
+    window.addEventListener("emu8086web:shortcuts-changed", onPrefs);
+    return () =>
+      window.removeEventListener("emu8086web:shortcuts-changed", onPrefs);
+  }, []);
+
+  // Reset history when file content jumps (tab switch / sample load)
+  useEffect(() => {
+    if (applyingHistory.current) {
+      applyingHistory.current = false;
+      lastSourceRef.current = source;
+      return;
+    }
+    if (source !== lastSourceRef.current) {
+      const hist = historyRef.current;
+      const idx = histIndexRef.current;
+      // External change not from our undo/redo
+      if (hist[idx] !== source) {
+        historyRef.current = [source];
+        histIndexRef.current = 0;
+      }
+      lastSourceRef.current = source;
+    }
+  }, [source]);
+
+  const pushHistory = useCallback((next: string) => {
+    if (next === historyRef.current[histIndexRef.current]) return;
+    const trimmed = historyRef.current.slice(0, histIndexRef.current + 1);
+    trimmed.push(next);
+    if (trimmed.length > HISTORY_LIMIT) trimmed.shift();
+    historyRef.current = trimmed;
+    histIndexRef.current = trimmed.length - 1;
+  }, []);
+
+  const commit = useCallback(
+    (next: string, selection?: { start: number; end: number }) => {
+      pushHistory(next);
+      onChange(next);
+      lastSourceRef.current = next;
+      if (selection) {
+        requestAnimationFrame(() => {
+          const ta = textareaRef.current;
+          if (!ta) return;
+          ta.selectionStart = selection.start;
+          ta.selectionEnd = selection.end;
+        });
+      }
+    },
+    [onChange, pushHistory],
+  );
+
+  const undo = useCallback(() => {
+    if (histIndexRef.current <= 0) return;
+    histIndexRef.current -= 1;
+    applyingHistory.current = true;
+    const prev = historyRef.current[histIndexRef.current] ?? "";
+    onChange(prev);
+    lastSourceRef.current = prev;
+  }, [onChange]);
+
+  const redo = useCallback(() => {
+    if (histIndexRef.current >= historyRef.current.length - 1) return;
+    histIndexRef.current += 1;
+    applyingHistory.current = true;
+    const next = historyRef.current[histIndexRef.current] ?? "";
+    onChange(next);
+    lastSourceRef.current = next;
+  }, [onChange]);
 
   const syncScroll = useCallback(() => {
     const ta = textareaRef.current;
@@ -69,11 +168,162 @@ export function CodeEditor({
     ?.replace(/^Runtime error — /i, "")
     .replace(/^Assembly error — /i, "");
 
+  const match = useCallback(
+    (e: KeyboardEvent, id: Parameters<typeof matchShortcut>[1]) =>
+      matchShortcut(e, id, schemeRef.current, overridesRef.current),
+    [],
+  );
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (match(e, "undo")) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if (match(e, "redo")) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
+      if (match(e, "formatDocument")) {
+        e.preventDefault();
+        const formatted = formatAsm(source, tabSize);
+        if (formatted !== source) {
+          const ta = e.currentTarget;
+          commit(formatted, {
+            start: Math.min(ta.selectionStart, formatted.length),
+            end: Math.min(ta.selectionEnd, formatted.length),
+          });
+        }
+        return;
+      }
+
+      if (match(e, "formatSelection")) {
+        e.preventDefault();
+        const ta = e.currentTarget;
+        const { next, start, end } = formatAsmSelection(
+          source,
+          ta.selectionStart,
+          ta.selectionEnd,
+          tabSize,
+        );
+        if (next !== source) commit(next, { start, end });
+        return;
+      }
+
+      if (match(e, "duplicateLine")) {
+        e.preventDefault();
+        const ta = e.currentTarget;
+        const { lineStart, lineEnd } = selectedLineRange(
+          source,
+          ta.selectionStart,
+          ta.selectionEnd,
+        );
+        const block = source.slice(lineStart, lineEnd);
+        const withDup =
+          source.slice(0, lineEnd) + "\n" + block + source.slice(lineEnd);
+        commit(withDup, {
+          start: lineEnd + 1,
+          end: lineEnd + 1 + block.length,
+        });
+        return;
+      }
+
+      if (match(e, "deleteLine")) {
+        e.preventDefault();
+        const ta = e.currentTarget;
+        const { lineStart, lineEnd } = selectedLineRange(
+          source,
+          ta.selectionStart,
+          ta.selectionEnd,
+        );
+        let cutStart = lineStart;
+        let cutEnd = lineEnd;
+        if (cutEnd < source.length && source[cutEnd] === "\n") {
+          cutEnd += 1;
+        } else if (cutStart > 0) {
+          cutStart -= 1;
+        }
+        const next = source.slice(0, cutStart) + source.slice(cutEnd);
+        commit(next, { start: cutStart, end: cutStart });
+        return;
+      }
+
+      if (match(e, "moveLineUp") || match(e, "moveLineDown")) {
+        e.preventDefault();
+        const down = match(e, "moveLineDown");
+        const ta = e.currentTarget;
+        const { lineStart, lineEnd } = selectedLineRange(
+          source,
+          ta.selectionStart,
+          ta.selectionEnd,
+        );
+        const lines = source.split("\n");
+        const startIdx = source.slice(0, lineStart).split("\n").length - 1;
+        const endIdx = source.slice(0, lineEnd).split("\n").length - 1;
+        if (!down && startIdx <= 0) return;
+        if (down && endIdx >= lines.length - 1) return;
+        const chunk = lines.splice(startIdx, endIdx - startIdx + 1);
+        const insertAt = down ? startIdx + 1 : startIdx - 1;
+        lines.splice(insertAt, 0, ...chunk);
+        const joined = lines.join("\n");
+        const prefix = lines.slice(0, insertAt).join("\n");
+        const newStart = prefix.length + (insertAt > 0 ? 1 : 0);
+        const newEnd = newStart + chunk.join("\n").length;
+        commit(joined, { start: newStart, end: newEnd });
+        return;
+      }
+
+      if (match(e, "toggleComment")) {
+        e.preventDefault();
+        const ta = e.currentTarget;
+        const { lineStart, lineEnd } = selectedLineRange(
+          source,
+          ta.selectionStart,
+          ta.selectionEnd,
+        );
+        const block = source.slice(lineStart, lineEnd);
+        const lines = block.split("\n");
+        const allCommented = lines.every(
+          (l) => !l.trim() || /^\s*;/.test(l),
+        );
+        const nextLines = lines.map((l) => {
+          if (!l.trim()) return l;
+          if (allCommented) return l.replace(/^(\s*); ?/, "$1");
+          const m = l.match(/^(\s*)/);
+          return `${m?.[1] ?? ""}; ${l.slice(m?.[1]?.length ?? 0)}`;
+        });
+        const nextBlock = nextLines.join("\n");
+        const next =
+          source.slice(0, lineStart) + nextBlock + source.slice(lineEnd);
+        commit(next, {
+          start: lineStart,
+          end: lineStart + nextBlock.length,
+        });
+        return;
+      }
+
+      if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        const ta = e.currentTarget;
+        const { selectionStart, selectionEnd, value } = ta;
+        const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+        const prevLine = value.slice(lineStart, selectionStart);
+        const nextIndent = indentAfterEnter(prevLine, tabSize);
+        const insert = `\n${nextIndent}`;
+        const next =
+          value.slice(0, selectionStart) + insert + value.slice(selectionEnd);
+        commit(next, {
+          start: selectionStart + insert.length,
+          end: selectionStart + insert.length,
+        });
+        return;
+      }
+
       if (e.key !== "Tab") return;
 
-      // Keep focus in the editor; insert/outdent instead of cycling panels
       e.preventDefault();
       const ta = e.currentTarget;
       const { selectionStart, selectionEnd, value } = ta;
@@ -90,56 +340,53 @@ export function CodeEditor({
         if (e.shiftKey) {
           let removedFirst = 0;
           let removedTotal = 0;
+          const outdentRe = new RegExp(`^ {1,${tabSize}}`);
           const outdented = lines.map((line, i) => {
-            const match = line.match(/^ {1,4}/);
-            if (!match) return line;
-            if (i === 0) removedFirst = match[0].length;
-            removedTotal += match[0].length;
-            return line.slice(match[0].length);
+            const matchLine = line.match(outdentRe);
+            if (!matchLine) return line;
+            if (i === 0) removedFirst = matchLine[0].length;
+            removedTotal += matchLine[0].length;
+            return line.slice(matchLine[0].length);
           });
-          onChange(
+          const next =
             value.slice(0, lineStart) +
-              outdented.join("\n") +
-              value.slice(lineEnd),
-          );
-          requestAnimationFrame(() => {
-            ta.selectionStart = Math.max(
-              lineStart,
-              selectionStart - removedFirst,
-            );
-            ta.selectionEnd = Math.max(
-              ta.selectionStart,
+            outdented.join("\n") +
+            value.slice(lineEnd);
+          commit(next, {
+            start: Math.max(lineStart, selectionStart - removedFirst),
+            end: Math.max(
+              Math.max(lineStart, selectionStart - removedFirst),
               selectionEnd - removedTotal,
-            );
+            ),
           });
           return;
         }
 
-        const indented = lines.map((line) => INDENT + line).join("\n");
-        onChange(
-          value.slice(0, lineStart) + indented + value.slice(lineEnd),
-        );
-        requestAnimationFrame(() => {
-          ta.selectionStart = selectionStart + INDENT.length;
-          ta.selectionEnd =
-            selectionEnd + INDENT.length * lines.length;
+        const indented = lines.map((line) => indent + line).join("\n");
+        const next =
+          value.slice(0, lineStart) + indented + value.slice(lineEnd);
+        commit(next, {
+          start: selectionStart + indent.length,
+          end: selectionEnd + indent.length * lines.length,
         });
         return;
       }
 
-      onChange(
-        value.slice(0, selectionStart) +
-          INDENT +
-          value.slice(selectionEnd),
-      );
-      requestAnimationFrame(() => {
-        const pos = selectionStart + INDENT.length;
-        ta.selectionStart = pos;
-        ta.selectionEnd = pos;
+      const next =
+        value.slice(0, selectionStart) + indent + value.slice(selectionEnd);
+      commit(next, {
+        start: selectionStart + indent.length,
+        end: selectionStart + indent.length,
       });
     },
-    [onChange],
+    [commit, indent, match, redo, source, tabSize, undo],
   );
+
+  const onInputChange = (value: string) => {
+    pushHistory(value);
+    onChange(value);
+    lastSourceRef.current = value;
+  };
 
   return (
     <div className="editor-wrap relative flex min-h-0 flex-1 overflow-hidden bg-bg">
@@ -180,7 +427,6 @@ export function CodeEditor({
       </div>
 
       <div className="relative min-h-0 min-w-0 flex-1">
-        {/* Highlights sit under transparent textarea */}
         {currentLine !== null && (
           <div
             className="pointer-events-none absolute right-0 left-0 z-[1] border-y border-[var(--highlight-border)] bg-[var(--highlight)]"
@@ -203,12 +449,15 @@ export function CodeEditor({
         <textarea
           ref={textareaRef}
           value={source}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onScroll={syncScroll}
           spellCheck={false}
-          className="relative z-[3] h-full min-h-0 w-full resize-none border-none bg-transparent px-3.5 py-3 font-mono text-[13px] leading-5 text-ink caret-amber outline-none"
-          style={{ tabSize: 4 }}
+          wrap={wordWrap ? "soft" : "off"}
+          className={`relative z-[3] h-full min-h-0 w-full resize-none border-none bg-transparent px-3.5 py-3 font-mono text-[13px] leading-5 text-ink caret-amber outline-none ${
+            wordWrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"
+          }`}
+          style={{ tabSize }}
           aria-label="Assembly source code"
         />
 

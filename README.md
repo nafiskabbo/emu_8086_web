@@ -2,7 +2,7 @@
 
 Browser-based 8086 assembler and step debugger. A modernization of classic emu8086 for every platform — write, assemble, and debug MASM-style assembly entirely in your browser.
 
-**Developed by [Nafis Islam Kabbo](https://github.com/nafiskabbo)** · Version **1.0.0** · [MIT License](LICENSE)
+**Developed by [Nafis Islam Kabbo](https://github.com/nafiskabbo)** · Version **1.1.0** · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
 ![emu8086web logo](public/logo.svg)
 
@@ -19,14 +19,16 @@ Open [http://localhost:3000](http://localhost:3000) — the IDE opens directly.
 
 - Multi-file workspace (tabs, open multiple `.asm` files, named Save / Save as)
 - Compile, Run, Pause, Step, Reset with breakpoints
-- Registers, flags, data segment, hex memory dump, stack & call stack
+- Registers, flags (with Details view), data segment, hex memory dump, stack & call stack
 - CRT console with DOS INT 21h / BIOS INT 10h / INT 16h I/O
 - Broad 8086 instruction coverage (interpretive engine)
-- Shareable program links, autosave, light/dark themes
-- Help tools: ASCII table, number converter (dec/hex/bin), About
+- Shareable program links, autosave, light/dark themes, accent color
+- Editor: indent-on-Enter, format document, tab size / word wrap
+- Help tools: ASCII table, number converter, shortcuts, changelog, About
+- Copy error for AI assistants from the error bar
 - Resizable editor / console / CPU panels; responsive mobile & desktop layout
-- Settings modal (theme, UI scale)
-- Vercel Analytics
+- Settings modal (theme, UI scale, editor prefs, accent)
+- Vercel Analytics; manual AdSense placements (Help / Settings / Call stack / bottom anchor)
 
 ## Using the IDE
 
@@ -40,12 +42,20 @@ Open [http://localhost:3000](http://localhost:3000) — the IDE opens directly.
 
 ### Keyboard shortcuts
 
-| Key | Action |
-|-----|--------|
-| F5 | Compile |
-| F8 | Single step |
-| Esc | Pause |
-| Ctrl/Cmd+S | Save active file |
+Defaults follow **IntelliJ** (switchable to VS Code in Help → Shortcuts). Mac shows ⌘/⌥; Windows shows Ctrl/Alt. Remap any chord in that panel.
+
+| Action | IntelliJ (typical) |
+|--------|-------------------|
+| Compile | F5 |
+| Step | F8 |
+| Pause / close dialog | Esc |
+| Save | ⌘/Ctrl+S |
+| Shortcuts help | ⌘/Ctrl+Shift+/ or `?` |
+| ASCII codes | ⌘/Ctrl+Shift+1 |
+| Number converter | ⌘/Ctrl+Shift+2 |
+| Format document | ⌘/Ctrl+⌥/Alt+F |
+| Format selection | ⌘/Ctrl+⌥/Alt+Shift+F |
+| Undo / Redo | ⌘/Ctrl+Z · ⌘/Ctrl+Shift+Z |
 
 ## Supported assembly
 

@@ -2,7 +2,7 @@
 
 A browser-based 8086 microprocessor assembler and step debugger — inspired by the classic emu8086 Windows application, rebuilt for the web by **Nafis Islam Kabbo**.
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 
 ## Goals
 
@@ -18,7 +18,7 @@ A browser-based 8086 microprocessor assembler and step debugger — inspired by 
 
 ## Feature matrix
 
-| Feature | Classic emu8086 | emu8086web 1.0 | Planned |
+| Feature | Classic emu8086 | emu8086web 1.1 | Planned |
 |---------|-----------------|----------------|---------|
 | MASM-style `.asm` source | Yes | Yes | — |
 | Compile / Step / Run | Yes | Yes | — |

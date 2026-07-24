@@ -8,6 +8,7 @@
   --line: #2a3548;
   --amber: #64d2ff;
   --amber-dim: #2a6f8f;
+  --amber-fg: #0a0f1a;
   --green: #4ade80;
   --red: #fb7185;
   --ink: #e2e8f0;
@@ -36,6 +37,7 @@
   --line: #dcdfd3;
   --amber: #b3690a;
   --amber-dim: #e2b273;
+  --amber-fg: #ffffff;
   --green: #1c8a5a;
   --red: #c8402f;
   --ink: #20241a;
@@ -89,7 +91,7 @@ body {
 
 ::selection {
   background: var(--amber);
-  color: #000;
+  color: var(--amber-fg);
 }
 
 @keyframes crt-blink {
@@ -179,13 +181,13 @@ body {
 
 .btn-primary {
   background: var(--amber);
-  color: #0a0f1a;
+  color: var(--amber-fg);
   border-color: var(--amber);
 }
 
 .btn-primary:hover:not(:disabled) {
   filter: brightness(1.1);
-  color: #0a0f1a;
+  color: var(--amber-fg);
 }
 
 .btn-danger:hover:not(:disabled) {

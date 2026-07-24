@@ -1,18 +1,25 @@
 /** Shared parsing and formatting helpers for the emulator. */
 
 export function stripComment(line: string): string {
-  let inStr = false;
+  let quote: "'" | '"' | null = null;
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
-    if (c === "'") inStr = !inStr;
-    if (c === ";" && !inStr) return line.slice(0, i);
+    if (quote) {
+      if (c === quote) quote = null;
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      quote = c;
+      continue;
+    }
+    if (c === ";") return line.slice(0, i);
   }
   return line;
 }
 
 export function parseNumber(tok: string): number | null {
   tok = tok.trim();
-  if (/^'.'$/.test(tok)) return tok.charCodeAt(1);
+  if (/^'.'$/.test(tok) || /^"."$/.test(tok)) return tok.charCodeAt(1);
   if (/^-?[0-9]+$/.test(tok)) return parseInt(tok, 10);
   if (/^0x[0-9a-f]+$/i.test(tok)) return parseInt(tok, 16);
   if (/^[0-9a-f]+h$/i.test(tok)) return parseInt(tok.slice(0, -1), 16);
@@ -24,16 +31,23 @@ export function parseNumber(tok: string): number | null {
 export function splitArgs(s: string): string[] {
   const out: string[] = [];
   let cur = "";
-  let inStr = false;
+  let quote: "'" | '"' | null = null;
   let depth = 0;
   for (let i = 0; i < s.length; i++) {
     const c = s[i];
-    if (c === "'") inStr = !inStr;
-    if (!inStr) {
-      if (c === "(") depth++;
-      if (c === ")") depth--;
+    if (quote) {
+      cur += c;
+      if (c === quote) quote = null;
+      continue;
     }
-    if (c === "," && !inStr && depth === 0) {
+    if (c === "'" || c === '"') {
+      quote = c;
+      cur += c;
+      continue;
+    }
+    if (c === "(") depth++;
+    if (c === ")") depth--;
+    if (c === "," && depth === 0) {
       out.push(cur);
       cur = "";
       continue;

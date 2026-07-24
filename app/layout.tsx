@@ -1,4 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
+import Script from "next/script";
+import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { rootMetadata } from "@/lib/seo";
 import { IBM_Plex_Mono, IBM_Plex_Sans, VT323 } from "next/font/google";
 import "./globals.css";
@@ -21,7 +23,12 @@ const vt323 = VT323({
   weight: "400",
 });
 
-export const metadata = rootMetadata;
+export const metadata = {
+  ...rootMetadata,
+  other: {
+    "google-adsense-account": ADSENSE_CLIENT,
+  },
+};
 
 export default function RootLayout({
   children,
@@ -43,9 +50,16 @@ export default function RootLayout({
           href="/llms.txt"
           title="LLM context"
         />
+        <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
       </head>
       <body className="flex min-h-full flex-col overflow-x-hidden">
         {children}
+        <Script
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
         <Analytics />
       </body>
     </html>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AdSenseAnchor, AdSenseUnit, AD_SLOTS } from "@/components/ads/adsense-unit";
 import { CodeEditor } from "@/components/ide/code-editor";
 import {
   ConsolePanel,
@@ -9,6 +10,7 @@ import {
   StatusLine,
 } from "@/components/ide/cpu-panels";
 import { FileTabs } from "@/components/ide/file-tabs";
+import { OPEN_HELP_EVENT } from "@/components/ide/help-menu";
 import {
   DataSegmentPanel,
   HexDumpPanel,
@@ -19,6 +21,16 @@ import { ResizeHandle } from "@/components/ide/resize-panels";
 import { SettingsModal } from "@/components/ide/settings-modal";
 import { Toolbar } from "@/components/ide/toolbar";
 import { useEmulator } from "@/lib/ide/use-emulator";
+import {
+  applyAccent,
+  FONT_SCALE_KEY,
+  loadAccent,
+  loadTabSize,
+  loadWordWrap,
+  TAB_SIZE_KEY,
+  type TabSize,
+  WORD_WRAP_KEY,
+} from "@/lib/ide/editor-prefs";
 import {
   createDefaultFile,
   createFileId,
@@ -33,6 +45,11 @@ import {
   clearShareQueryFromUrl,
   takeSharedSourceFromUrl,
 } from "@/lib/ide/share-boot";
+import {
+  loadOverrides,
+  loadScheme,
+  matchShortcut,
+} from "@/lib/ide/shortcuts";
 
 export function IdeWorkspace() {
   const [files, setFiles] = useState<WorkspaceFile[]>(() => [createDefaultFile()]);
@@ -43,6 +60,8 @@ export function IdeWorkspace() {
   const [editorPct, setEditorPct] = useState(58);
   const [cpuCollapsed, setCpuCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tabSize, setTabSize] = useState<TabSize>(4);
+  const [wordWrap, setWordWrap] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorWrapRef = useRef<HTMLDivElement>(null);
@@ -74,29 +93,60 @@ export function IdeWorkspace() {
     if (sharedSource) {
       const file = createDefaultFile("shared.asm");
       file.content = sharedSource;
-      setFiles([file]);
-      setActiveId(file.id);
-      lastSynced.current = file.id;
-      emu.setSource(sharedSource);
-      clearShareQueryFromUrl();
-      setHydrated(true);
+      queueMicrotask(() => {
+        setFiles([file]);
+        setActiveId(file.id);
+        lastSynced.current = file.id;
+        emu.setSource(sharedSource);
+        clearShareQueryFromUrl();
+        setHydrated(true);
+      });
       return;
     }
 
     const stored = loadFilesFromStorage();
-    if (stored) {
-      setFiles(stored.files);
-      setActiveId(stored.activeId);
-      lastSynced.current = null;
-    }
-    setHydrated(true);
+    queueMicrotask(() => {
+      if (stored) {
+        setFiles(stored.files);
+        setActiveId(stored.activeId);
+        lastSynced.current = null;
+      }
+      setHydrated(true);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once on mount
   }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setTabSize(loadTabSize());
+      setWordWrap(loadWordWrap());
+      const scale = localStorage.getItem(FONT_SCALE_KEY);
+      if (scale) {
+        document.documentElement.style.fontSize = `${Number(scale) || 100}%`;
+      }
+      applyAccent(loadAccent(), emu.theme);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- prefs once on mount
+  }, []);
+
+  useEffect(() => {
+    applyAccent(loadAccent(), emu.theme);
+  }, [emu.theme]);
 
   useEffect(() => {
     if (!hydrated) return;
     saveFilesToStorage(files, activeId);
   }, [files, activeId, hydrated]);
+
+  const persistTabSize = useCallback((size: TabSize) => {
+    setTabSize(size);
+    localStorage.setItem(TAB_SIZE_KEY, String(size));
+  }, []);
+
+  const persistWordWrap = useCallback((wrap: boolean) => {
+    setWordWrap(wrap);
+    localStorage.setItem(WORD_WRAP_KEY, wrap ? "1" : "0");
+  }, []);
 
   const { machine, assembled, tick } = emu;
   void tick;
@@ -322,24 +372,76 @@ export function IdeWorkspace() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      const scheme = loadScheme();
+      const overrides = loadOverrides();
+      const hit = (id: Parameters<typeof matchShortcut>[1]) =>
+        matchShortcut(e, id, scheme, overrides);
+
+      if (hit("save")) {
         e.preventDefault();
         handleSave();
         return;
       }
+
       if (
-        e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLInputElement
+        hit("shortcuts") ||
+        (e.key === "?" &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !(e.target instanceof HTMLTextAreaElement) &&
+          !(e.target instanceof HTMLInputElement))
       ) {
+        e.preventDefault();
+        window.dispatchEvent(
+          new CustomEvent(OPEN_HELP_EVENT, {
+            detail: { panel: "shortcuts" },
+          }),
+        );
         return;
       }
-      if (e.key === "F5") {
+
+      if (hit("ascii")) {
+        e.preventDefault();
+        window.dispatchEvent(
+          new CustomEvent(OPEN_HELP_EVENT, {
+            detail: { panel: "ascii" },
+          }),
+        );
+        return;
+      }
+
+      if (hit("convert")) {
+        e.preventDefault();
+        window.dispatchEvent(
+          new CustomEvent(OPEN_HELP_EVENT, {
+            detail: { panel: "convert" },
+          }),
+        );
+        return;
+      }
+
+      if (hit("assemble")) {
         e.preventDefault();
         if (hasFiles) emu.doAssemble();
-      } else if (e.key === "F8") {
+        return;
+      }
+      if (hit("step")) {
         e.preventDefault();
         emu.doStep();
-      } else if (e.key === "Escape" && !settingsOpen) {
+        return;
+      }
+
+      const inField =
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLInputElement;
+
+      if (inField) return;
+
+      if (e.key === "Escape" && !settingsOpen) {
+        const openDialog = document.querySelector(
+          '[role="dialog"][aria-modal="true"]',
+        );
+        if (openDialog) return;
         e.preventDefault();
         emu.doPause();
       }
@@ -360,7 +462,10 @@ export function IdeWorkspace() {
   }, []);
 
   return (
-    <div className="grid h-dvh max-h-dvh grid-rows-[auto_auto_1fr] overflow-hidden bg-bg">
+    <div
+      className="grid h-dvh max-h-dvh grid-rows-[auto_auto_1fr] overflow-hidden bg-bg"
+      style={{ paddingBottom: "var(--ad-anchor-pad, 0px)" }}
+    >
       <input
         ref={fileInputRef}
         type="file"
@@ -473,10 +578,14 @@ export function IdeWorkspace() {
                 onToggleBreakpoint={emu.toggleBreakpoint}
                 errorLine={errorLine}
                 errorMessage={errorMessage}
+                tabSize={tabSize}
+                wordWrap={wordWrap}
               />
               <ErrorBar
                 message={errorMessage}
                 onJump={errorLine ? jumpToError : undefined}
+                source={emu.source}
+                errorLine={errorLine}
               />
             </div>
 
@@ -521,6 +630,9 @@ export function IdeWorkspace() {
               onHexBaseChange={emu.setHexBase}
             />
             <StackPanels machine={machine} />
+            <div className="mt-2 hidden border-t border-line px-2 py-2 lg:block">
+              <AdSenseUnit slot={AD_SLOTS.banner2} compact />
+            </div>
           </div>
         </div>
       )}
@@ -530,7 +642,12 @@ export function IdeWorkspace() {
         onClose={() => setSettingsOpen(false)}
         theme={emu.theme}
         onThemeChange={emu.applyTheme}
+        tabSize={tabSize}
+        onTabSizeChange={persistTabSize}
+        wordWrap={wordWrap}
+        onWordWrapChange={persistWordWrap}
       />
+      <AdSenseAnchor slot={AD_SLOTS.banner1} />
       <Toast message={toast} />
     </div>
   );
