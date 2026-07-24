@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  forwardRef,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useRef,
   useState,
   type KeyboardEvent,
@@ -21,6 +23,13 @@ import {
   type ShortcutScheme,
 } from "@/lib/ide/shortcuts";
 
+export type CodeEditorHandle = {
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+};
+
 interface CodeEditorProps {
   source: string;
   onChange: (value: string) => void;
@@ -31,6 +40,7 @@ interface CodeEditorProps {
   errorMessage: string | null;
   tabSize?: TabSize;
   wordWrap?: boolean;
+  onHistoryChange?: (state: { canUndo: boolean; canRedo: boolean }) => void;
 }
 
 const LINE_H = 20;
@@ -46,17 +56,22 @@ function selectedLineRange(value: string, start: number, end: number) {
   return { lineStart, lineEnd };
 }
 
-export function CodeEditor({
-  source,
-  onChange,
-  currentLine,
-  breakpoints,
-  onToggleBreakpoint,
-  errorLine,
-  errorMessage,
-  tabSize = 4,
-  wordWrap = false,
-}: CodeEditorProps) {
+export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
+  function CodeEditor(
+    {
+      source,
+      onChange,
+      currentLine,
+      breakpoints,
+      onToggleBreakpoint,
+      errorLine,
+      errorMessage,
+      tabSize = 4,
+      wordWrap = false,
+      onHistoryChange,
+    },
+    ref,
+  ) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -69,6 +84,15 @@ export function CodeEditor({
   const lastSourceRef = useRef(source);
   const schemeRef = useRef<ShortcutScheme>(loadScheme());
   const overridesRef = useRef<OverrideMap>(loadOverrides());
+  const onHistoryChangeRef = useRef(onHistoryChange);
+  onHistoryChangeRef.current = onHistoryChange;
+
+  const emitHistory = useCallback(() => {
+    onHistoryChangeRef.current?.({
+      canUndo: histIndexRef.current > 0,
+      canRedo: histIndexRef.current < historyRef.current.length - 1,
+    });
+  }, []);
 
   useEffect(() => {
     schemeRef.current = loadScheme();
@@ -87,6 +111,7 @@ export function CodeEditor({
     if (applyingHistory.current) {
       applyingHistory.current = false;
       lastSourceRef.current = source;
+      emitHistory();
       return;
     }
     if (source !== lastSourceRef.current) {
@@ -98,17 +123,22 @@ export function CodeEditor({
         histIndexRef.current = 0;
       }
       lastSourceRef.current = source;
+      emitHistory();
     }
-  }, [source]);
+  }, [source, emitHistory]);
 
-  const pushHistory = useCallback((next: string) => {
-    if (next === historyRef.current[histIndexRef.current]) return;
-    const trimmed = historyRef.current.slice(0, histIndexRef.current + 1);
-    trimmed.push(next);
-    if (trimmed.length > HISTORY_LIMIT) trimmed.shift();
-    historyRef.current = trimmed;
-    histIndexRef.current = trimmed.length - 1;
-  }, []);
+  const pushHistory = useCallback(
+    (next: string) => {
+      if (next === historyRef.current[histIndexRef.current]) return;
+      const trimmed = historyRef.current.slice(0, histIndexRef.current + 1);
+      trimmed.push(next);
+      if (trimmed.length > HISTORY_LIMIT) trimmed.shift();
+      historyRef.current = trimmed;
+      histIndexRef.current = trimmed.length - 1;
+      emitHistory();
+    },
+    [emitHistory],
+  );
 
   const commit = useCallback(
     (next: string, selection?: { start: number; end: number }) => {
@@ -134,7 +164,8 @@ export function CodeEditor({
     const prev = historyRef.current[histIndexRef.current] ?? "";
     onChange(prev);
     lastSourceRef.current = prev;
-  }, [onChange]);
+    emitHistory();
+  }, [onChange, emitHistory]);
 
   const redo = useCallback(() => {
     if (histIndexRef.current >= historyRef.current.length - 1) return;
@@ -143,7 +174,23 @@ export function CodeEditor({
     const next = historyRef.current[histIndexRef.current] ?? "";
     onChange(next);
     lastSourceRef.current = next;
-  }, [onChange]);
+    emitHistory();
+  }, [onChange, emitHistory]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      undo,
+      redo,
+      canUndo: () => histIndexRef.current > 0,
+      canRedo: () => histIndexRef.current < historyRef.current.length - 1,
+    }),
+    [undo, redo],
+  );
+
+  useEffect(() => {
+    emitHistory();
+  }, [emitHistory]);
 
   const syncScroll = useCallback(() => {
     const ta = textareaRef.current;
@@ -475,4 +522,5 @@ export function CodeEditor({
       </div>
     </div>
   );
-}
+  },
+);

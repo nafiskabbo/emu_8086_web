@@ -102,7 +102,7 @@ export function Toolbar({
           type="button"
           className="btn hidden md:inline-flex"
           onClick={onShare}
-          title="Copy share link"
+          title="Create share link"
         >
           Share
         </button>

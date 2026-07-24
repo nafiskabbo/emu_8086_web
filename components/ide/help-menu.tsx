@@ -4,9 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import { AdSenseUnit, AD_SLOTS } from "@/components/ads/adsense-unit";
 import { AuthorContacts } from "@/components/ide/author-contacts";
 import { DialogShell } from "@/components/ide/dialog-shell";
+import { IconGitHub } from "@/components/ide/editor-icons";
 import { ShortcutsHelp } from "@/components/ide/shortcuts-help";
 import { CHANGELOG } from "@/lib/changelog";
-import { APP_AUTHOR, APP_NAME, APP_TAGLINE, APP_VERSION } from "@/lib/version";
+import {
+  formatShortcutLabel,
+  loadOsView,
+  loadOverrides,
+  loadScheme,
+  type OsView,
+  type OverrideMap,
+  type ShortcutId,
+  type ShortcutScheme,
+} from "@/lib/ide/shortcuts";
+import { APP_AUTHOR, APP_NAME, APP_REPO_URL, APP_TAGLINE, APP_VERSION } from "@/lib/version";
+
 
 export type HelpPanel =
   | null
@@ -34,9 +46,41 @@ const PANEL_META: Record<
   about: { title: `About ${APP_NAME}` },
 };
 
+/** Help dropdown rows that have a bound ShortcutId. */
+const MENU_ITEMS: {
+  id: Exclude<HelpPanel, null | "menu">;
+  label: string;
+  shortcutId?: ShortcutId;
+}[] = [
+  { id: "ascii", label: "ASCII codes", shortcutId: "ascii" },
+  { id: "convert", label: "Number converter", shortcutId: "convert" },
+  { id: "shortcuts", label: "Keyboard shortcuts", shortcutId: "shortcuts" },
+  { id: "changelog", label: "Changelog" },
+  { id: "about", label: "About" },
+];
+
 export function HelpMenu({ onOpenSettings }: HelpMenuProps) {
   const [panel, setPanel] = useState<HelpPanel>(null);
+  const [scheme, setScheme] = useState<ShortcutScheme>("intellij");
+  const [osView, setOsView] = useState<OsView>("auto");
+  const [overrides, setOverrides] = useState<OverrideMap>({});
   const rootRef = useRef<HTMLDivElement>(null);
+
+  const reloadShortcutPrefs = () => {
+    setScheme(loadScheme());
+    setOsView(loadOsView());
+    setOverrides(loadOverrides());
+  };
+
+  useEffect(() => {
+    queueMicrotask(reloadShortcutPrefs);
+    window.addEventListener("emu8086web:shortcuts-changed", reloadShortcutPrefs);
+    return () =>
+      window.removeEventListener(
+        "emu8086web:shortcuts-changed",
+        reloadShortcutPrefs,
+      );
+  }, []);
 
   useEffect(() => {
     if (!panel) return;
@@ -67,32 +111,37 @@ export function HelpMenu({ onOpenSettings }: HelpMenuProps) {
       <button
         type="button"
         className="btn"
-        onClick={() => setPanel((p) => (p ? null : "menu"))}
+        onClick={() => {
+          if (!panel) reloadShortcutPrefs();
+          setPanel((p) => (p ? null : "menu"));
+        }}
         title="Help"
       >
         Help
       </button>
 
       {panel === "menu" && (
-        <div className="absolute top-full right-0 z-40 mt-1 min-w-[220px] border border-line bg-panel py-1 shadow-xl">
-          {(
-            [
-              ["ascii", "ASCII codes"],
-              ["convert", "Number converter"],
-              ["shortcuts", "Keyboard shortcuts"],
-              ["changelog", "Changelog"],
-              ["about", "About"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className="block w-full px-3 py-2 text-left text-xs text-ink hover:bg-panel-2 hover:text-amber"
-              onClick={() => setPanel(id)}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="absolute top-full right-0 z-40 mt-1 min-w-[260px] border border-line bg-panel py-1 shadow-xl">
+          {MENU_ITEMS.map(({ id, label, shortcutId }) => {
+            const chord = shortcutId
+              ? formatShortcutLabel(shortcutId, scheme, osView, overrides)
+              : null;
+            return (
+              <button
+                key={id}
+                type="button"
+                className="flex w-full items-center justify-between gap-4 px-3 py-2 text-left text-xs text-ink hover:bg-panel-2 hover:text-amber"
+                onClick={() => setPanel(id)}
+              >
+                <span>{label}</span>
+                {chord ? (
+                  <kbd className="shrink-0 rounded border border-line bg-panel-2 px-1.5 py-0.5 font-mono text-[10px] text-ink-dim">
+                    {chord}
+                  </kbd>
+                ) : null}
+              </button>
+            );
+          })}
           <button
             type="button"
             className="block w-full border-t border-line px-3 py-2 text-left text-xs text-ink hover:bg-panel-2 hover:text-amber"
@@ -308,10 +357,24 @@ function AboutPanel() {
         <Row label="Version" value={APP_VERSION} />
         <Row label="Developed by" value={APP_AUTHOR.name} />
         <Row label="Email" value={APP_AUTHOR.email} />
+        <div className="flex justify-between gap-4 border-b border-line/40 py-1">
+          <dt className="text-ink-dim">Repository</dt>
+          <dd className="min-w-0 text-right">
+            <a
+              href={APP_REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-end gap-1.5 break-all text-amber hover:underline"
+            >
+              <IconGitHub className="h-3.5 w-3.5 shrink-0" />
+              emu_8086_web
+            </a>
+          </dd>
+        </div>
       </dl>
       <div className="mt-4">
         <p className="mb-2 text-xs tracking-wider text-ink-dim uppercase">
-          Connect
+          Connect & contribute
         </p>
         <AuthorContacts />
       </div>

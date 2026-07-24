@@ -2,7 +2,7 @@
 
 A browser-based 8086 microprocessor assembler and step debugger — inspired by the classic emu8086 Windows application, rebuilt for the web by **Nafis Islam Kabbo**.
 
-**Version:** 1.1.1
+**Version:** 1.2.0
 
 ## Goals
 
@@ -29,7 +29,7 @@ A browser-based 8086 microprocessor assembler and step debugger — inspired by 
 | Console I/O (INT 21h/10h/16h) | Yes | Broad text I/O | Graphics |
 | Full instruction set | Yes | Broad interpretive set | Gaps filled over time |
 | Breakpoints | Yes | Yes | — |
-| Share links | No | Yes | — |
+| Share links | No | Yes (TTL short URLs) | — |
 | Virtual I/O devices | Yes | No | Roadmap |
 | Binary `.com` export | Yes | No | Roadmap |
 | Tutorials app | Yes | No | Roadmap |

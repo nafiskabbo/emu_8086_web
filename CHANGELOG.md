@@ -2,6 +2,21 @@
 
 All notable changes to emu8086web are documented in this file.
 
+## [1.2.0] — 2026-07-24
+
+### Added
+
+- Share dialog: expiry 1 / 3 / 7 days, short `/s/{code}` URL, QR code, copy link (Supabase-backed)
+- Anonymous Share API (`POST /api/share`, `GET /api/share/{code}`) with size limits, dedup, rate limit, and expired-row cleanup
+- Editor paneltitle: Undo / Redo / Copy icon buttons
+- Agent & SEO discoverability: absolute sitemap, robots Content-Signal (`ai-train=yes, search=yes, ai-input=yes`), Link headers, Markdown-for-Agents on `/`, API catalog, health endpoint, agent-skills index, WebMCP tools, JSON-LD (author + product + portfolio sites)
+
+### Notes
+
+- Run the `shared_programs` SQL from the 1.2.0 release plan in the Supabase SQL editor; set `SUPABASE_SERVICE_ROLE_KEY` (never expose it as `NEXT_PUBLIC_`)
+- Optional DNS-AID SVCB records for agent discovery must be configured in your DNS provider (e.g. Cloudflare) — not shipped as app code
+- Legacy `?p=` share links still load
+
 ## [1.1.1] — 2026-07-24
 
 ### Added

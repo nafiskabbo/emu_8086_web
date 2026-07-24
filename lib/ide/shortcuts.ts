@@ -328,6 +328,22 @@ export function formatChordBoth(mac: Chord, win: Chord): string {
   return `${w} / ${m}`;
 }
 
+/** Label for a shortcut using the user's scheme, OS view, and overrides. */
+export function formatShortcutLabel(
+  id: ShortcutId,
+  scheme: ShortcutScheme,
+  osView: OsView,
+  overrides: OverrideMap,
+): string | null {
+  const def = SHORTCUT_DEFS.find((d) => d.id === id);
+  if (!def) return null;
+  const resolved = resolveOsView(osView);
+  const mac = getEffectiveChord(def, scheme, "mac", overrides);
+  const win = getEffectiveChord(def, scheme, "windows", overrides);
+  if (resolved === "both") return formatChordBoth(mac, win);
+  return formatChord(resolved === "mac" ? mac : win, resolved);
+}
+
 export function chordFromEvent(e: {
   key: string;
   ctrlKey: boolean;

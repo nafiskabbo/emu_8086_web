@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdSenseUnit, AD_SLOTS } from "@/components/ads/adsense-unit";
 import { AuthorContacts } from "@/components/ide/author-contacts";
 import { DialogShell } from "@/components/ide/dialog-shell";
+import { IconGitHub } from "@/components/ide/editor-icons";
 import { THEME_KEY } from "@/lib/emulator";
 import {
   ACCENT_KEY,
@@ -15,7 +16,7 @@ import {
   type TabSize,
   WORD_WRAP_KEY,
 } from "@/lib/ide/editor-prefs";
-import { APP_AUTHOR, APP_NAME, APP_TAGLINE, APP_VERSION } from "@/lib/version";
+import { APP_AUTHOR, APP_NAME, APP_REPO_URL, APP_TAGLINE, APP_VERSION } from "@/lib/version";
 
 type Theme = "dark" | "light";
 
@@ -214,6 +215,15 @@ export function SettingsModal({
             {APP_AUTHOR.email}
           </a>
         </p>
+        <a
+          href={APP_REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1.5 text-xs text-amber hover:underline"
+        >
+          <IconGitHub className="h-3.5 w-3.5" />
+          Open-source on GitHub — contributions welcome
+        </a>
         <AuthorContacts className="mt-3" />
       </section>
     </DialogShell>

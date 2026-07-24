@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
+import { IconCopy } from "@/components/ide/editor-icons";
 import { buildErrorClipboardText } from "@/lib/ide/copy-error-context";
 
 interface ErrorBarProps {
@@ -63,10 +64,11 @@ export function ErrorBar({
         )}
         <button
           type="button"
-          className="underline decoration-red/60 hover:text-ink"
+          className="inline-flex items-center gap-1 underline decoration-red/60 hover:text-ink"
           onClick={copyError}
           title="Copy error with source context for AI assistants"
         >
+          <IconCopy className="h-3 w-3" />
           {copied ? "Copied!" : "Copy error"}
         </button>
       </span>

@@ -1,7 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
 import { ADSENSE_CLIENT } from "@/lib/adsense";
-import { rootMetadata } from "@/lib/seo";
+import { buildJsonLd, rootMetadata } from "@/lib/seo";
 import { IBM_Plex_Mono, IBM_Plex_Sans, VT323 } from "next/font/google";
 import "./globals.css";
 
@@ -35,6 +35,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = buildJsonLd();
+
   return (
     <html
       lang="en"
@@ -50,7 +52,17 @@ export default function RootLayout({
           href="/llms.txt"
           title="LLM context"
         />
+        <link
+          rel="alternate"
+          type="text/markdown"
+          href="/"
+          title="Markdown for Agents"
+        />
         <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body className="flex min-h-full flex-col overflow-x-hidden">
         {children}

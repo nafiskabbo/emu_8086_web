@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AdSenseAnchor, AdSenseUnit, AD_SLOTS } from "@/components/ads/adsense-unit";
-import { CodeEditor } from "@/components/ide/code-editor";
+import { CodeEditor, type CodeEditorHandle } from "@/components/ide/code-editor";
 import {
   ConsolePanel,
   FlagsPanel,
   RegisterPanel,
   StatusLine,
 } from "@/components/ide/cpu-panels";
+import { IconCopy, IconRedo, IconUndo } from "@/components/ide/editor-icons";
 import { FileTabs } from "@/components/ide/file-tabs";
 import { OPEN_HELP_EVENT } from "@/components/ide/help-menu";
 import {
@@ -19,7 +20,9 @@ import {
 import { ErrorBar, Toast } from "@/components/ide/overlays";
 import { ResizeHandle } from "@/components/ide/resize-panels";
 import { SettingsModal } from "@/components/ide/settings-modal";
+import { ShareDialog } from "@/components/ide/share-dialog";
 import { Toolbar } from "@/components/ide/toolbar";
+import { WebMcpBootstrap } from "@/components/ide/webmcp-bootstrap";
 import { useEmulator } from "@/lib/ide/use-emulator";
 import {
   applyAccent,
@@ -43,6 +46,8 @@ import type { SampleKey } from "@/lib/emulator";
 import { SAMPLES } from "@/lib/emulator";
 import {
   clearShareQueryFromUrl,
+  setMemoryShare,
+  takeShareCodeFromUrl,
   takeSharedSourceFromUrl,
 } from "@/lib/ide/share-boot";
 import {
@@ -60,12 +65,16 @@ export function IdeWorkspace() {
   const [editorPct, setEditorPct] = useState(58);
   const [cpuCollapsed, setCpuCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [tabSize, setTabSize] = useState<TabSize>(4);
   const [wordWrap, setWordWrap] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorWrapRef = useRef<HTMLDivElement>(null);
   const splitRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<CodeEditorHandle>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   const active = useMemo(
     () => files.find((f) => f.id === activeId) ?? null,
@@ -88,19 +97,53 @@ export function IdeWorkspace() {
   }, [active?.id]);
 
   useEffect(() => {
-    const sharedSource = takeSharedSourceFromUrl();
-
-    if (sharedSource) {
+    const applyShared = (sharedSource: string) => {
       const file = createDefaultFile("shared.asm");
       file.content = sharedSource;
-      queueMicrotask(() => {
-        setFiles([file]);
-        setActiveId(file.id);
-        lastSynced.current = file.id;
-        emu.setSource(sharedSource);
+      setFiles([file]);
+      setActiveId(file.id);
+      lastSynced.current = file.id;
+      emu.setSource(sharedSource);
+      setMemoryShare(sharedSource);
+      clearShareQueryFromUrl();
+      setHydrated(true);
+    };
+
+    const sharedSource = takeSharedSourceFromUrl();
+    if (sharedSource) {
+      queueMicrotask(() => applyShared(sharedSource));
+      return;
+    }
+
+    const shareCode = takeShareCodeFromUrl();
+    if (shareCode) {
+      const fromSession = sessionStorage.getItem(`emu8086web:share:${shareCode}`);
+      if (fromSession) {
+        sessionStorage.removeItem(`emu8086web:share:${shareCode}`);
+        queueMicrotask(() => applyShared(fromSession));
+        return;
+      }
+      void (async () => {
+        try {
+          const res = await fetch(`/api/share/${shareCode}`);
+          const data = (await res.json()) as { source?: string };
+          if (res.ok && data.source) {
+            applyShared(data.source);
+            return;
+          }
+        } catch {
+          /* fall through to local storage */
+        }
         clearShareQueryFromUrl();
+        const stored = loadFilesFromStorage();
+        if (stored) {
+          setFiles(stored.files);
+          setActiveId(stored.activeId);
+          lastSynced.current = null;
+        }
         setHydrated(true);
-      });
+        setToast("Shared program not found or expired");
+      })();
       return;
     }
 
@@ -309,19 +352,12 @@ export function IdeWorkspace() {
     showToast(`Saved ${finalName}`);
   };
 
-  const handleShare = async () => {
-    const url = emu.shareLink();
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        throw new Error("clipboard unavailable");
-      }
-      showToast("Share link copied");
-    } catch {
-      window.prompt("Copy this share link:", url);
-      showToast("Share link ready");
+  const handleShare = () => {
+    if (!hasFiles) {
+      showToast("Open or create a file first");
+      return;
     }
+    setShareOpen(true);
   };
 
   const handleCopyCode = async () => {
@@ -461,11 +497,33 @@ export function IdeWorkspace() {
     setEditorPct((p) => Math.min(82, Math.max(22, p + (delta / height) * 100)));
   }, []);
 
+  useEffect(() => {
+    const onGet = () => {
+      window.dispatchEvent(
+        new CustomEvent("emu8086web:webmcp-source", {
+          detail: { source: emu.source },
+        }),
+      );
+    };
+    const onSet = (e: Event) => {
+      const source = (e as CustomEvent<{ source?: string }>).detail?.source;
+      if (typeof source !== "string") return;
+      updateActiveContent(source);
+    };
+    window.addEventListener("emu8086web:webmcp-get-source", onGet);
+    window.addEventListener("emu8086web:webmcp-set-source", onSet);
+    return () => {
+      window.removeEventListener("emu8086web:webmcp-get-source", onGet);
+      window.removeEventListener("emu8086web:webmcp-set-source", onSet);
+    };
+  });
+
   return (
     <div
       className="grid h-dvh max-h-dvh grid-rows-[auto_auto_1fr] overflow-hidden bg-bg"
       style={{ paddingBottom: "var(--ad-anchor-pad, 0px)" }}
     >
+      <WebMcpBootstrap />
       <input
         ref={fileInputRef}
         type="file"
@@ -553,14 +611,37 @@ export function IdeWorkspace() {
                     Source —{" "}
                     <span className="text-amber">{active?.name ?? "CODE.ASM"}</span>
                   </span>
-                  <button
-                    type="button"
-                    className="shrink-0 rounded border border-line px-1.5 py-0.5 text-[10px] tracking-wide text-ink-dim uppercase hover:border-amber hover:text-amber"
-                    onClick={handleCopyCode}
-                    title="Copy source code"
-                  >
-                    Copy
-                  </button>
+                  <span className="flex shrink-0 items-center gap-0.5">
+                    <button
+                      type="button"
+                      className="btn btn-icon !px-1.5 !py-1 disabled:opacity-40"
+                      onClick={() => editorRef.current?.undo()}
+                      disabled={!canUndo}
+                      title="Undo"
+                      aria-label="Undo"
+                    >
+                      <IconUndo />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-icon !px-1.5 !py-1 disabled:opacity-40"
+                      onClick={() => editorRef.current?.redo()}
+                      disabled={!canRedo}
+                      title="Redo"
+                      aria-label="Redo"
+                    >
+                      <IconRedo />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-icon !px-1.5 !py-1"
+                      onClick={handleCopyCode}
+                      title="Copy source code"
+                      aria-label="Copy source code"
+                    >
+                      <IconCopy />
+                    </button>
+                  </span>
                 </span>
                 <button
                   type="button"
@@ -571,6 +652,7 @@ export function IdeWorkspace() {
                 </button>
               </div>
               <CodeEditor
+                ref={editorRef}
                 source={emu.source}
                 onChange={updateActiveContent}
                 currentLine={currentLine}
@@ -580,6 +662,10 @@ export function IdeWorkspace() {
                 errorMessage={errorMessage}
                 tabSize={tabSize}
                 wordWrap={wordWrap}
+                onHistoryChange={({ canUndo: u, canRedo: r }) => {
+                  setCanUndo(u);
+                  setCanRedo(r);
+                }}
               />
               <ErrorBar
                 message={errorMessage}
@@ -646,6 +732,12 @@ export function IdeWorkspace() {
         onTabSizeChange={persistTabSize}
         wordWrap={wordWrap}
         onWordWrapChange={persistWordWrap}
+      />
+      <ShareDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        source={emu.source}
+        onToast={showToast}
       />
       <AdSenseAnchor slot={AD_SLOTS.banner1} />
       <Toast message={toast} />

@@ -8,6 +8,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.2.0",
+    date: "2026-07-24",
+    highlights: [
+      "Share dialog: 1/3/7 day expiry, short /s/{code} links, QR code (Supabase)",
+      "Undo / Redo / Copy icon buttons in the Source panel",
+      "Agent-ready SEO: sitemap, Content-Signal, Link headers, Markdown Accept, API catalog, skills index, WebMCP",
+      "JSON-LD author + product and portfolio site URLs",
+    ],
+  },
+  {
     version: "1.1.1",
     date: "2026-07-24",
     highlights: [

@@ -5,6 +5,7 @@ import type { Machine } from "@/lib/emulator/machine";
 import { hex4 } from "@/lib/emulator";
 import { flagsToWord } from "@/lib/emulator/flags";
 import { DialogShell } from "@/components/ide/dialog-shell";
+import { IconCopy } from "@/components/ide/editor-icons";
 
 interface ConsolePanelProps {
   machine: Machine | null;
@@ -36,9 +37,11 @@ export function ConsolePanel({
         <span>Console output</span>
         <button
           type="button"
-          className="text-[10px] text-ink-dim hover:text-amber"
+          className="inline-flex items-center gap-1 text-[10px] text-ink-dim hover:text-amber"
           onClick={onCopy}
+          title="Copy console output"
         >
+          <IconCopy className="h-3 w-3" />
           Copy
         </button>
       </div>

@@ -12,12 +12,27 @@ emu8086web is an open-source web IDE for writing, assembling, and debugging Inte
 - Step / run debugger with breakpoints, registers, flags, memory, and stack views
 - DOS INT 21h and BIOS INT 10h console I/O
 - Multi-file workspace with named save
-- Shareable program links
+- Time-limited shareable program links (`/s/{code}`, 1/3/7 day expiry)
 - Light and dark themes
 
-## Primary URL
+## Primary URLs
 
-The application root `/` opens the IDE directly.
+- Product (IDE): https://emu8086web.vercel.app/
+- Author portfolio: https://nafiskabbo.vercel.app/
+- Author: Nafis Islam Kabbo (https://github.com/nafiskabbo)
+- Source repository: https://github.com/nafiskabbo/emu_8086_web
+
+The application root `/` opens the IDE directly. Agents may request `Accept: text/markdown` on `/` for a concise markdown summary.
+
+## Discovery
+
+- `/llms.txt` — LLM context
+- `/sitemap.xml` — sitemap
+- `/robots.txt` — crawl rules + Content-Signal
+- `/.well-known/api-catalog` — API catalog (RFC 9727)
+- `/.well-known/agent-skills/index.json` — agent skills index
+- `/api/health` — health check
+- `POST /api/share` · `GET /api/share/{code}` — anonymous share API
 
 ## Documentation
 

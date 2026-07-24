@@ -1,6 +1,6 @@
 {
   "name": "emu8086web",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "private": false,
   "description": "Modern browser-based 8086 assembler and step debugger for every platform",
   "author": "Nafis Islam Kabbo",
@@ -33,14 +33,18 @@
     "verify": "npm run lint && npm run typecheck && npm run build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
     "@vercel/analytics": "^2.0.1",
     "next": "16.2.10",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

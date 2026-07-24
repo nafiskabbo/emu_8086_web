@@ -1,7 +1,9 @@
 /** Application version — bump when shipping user-facing features. */
-export const APP_VERSION = "1.1.1";
+export const APP_VERSION = "1.2.0";
 
 export const APP_NAME = "emu8086web";
+
+export const APP_REPO_URL = "https://github.com/nafiskabbo/emu_8086_web";
 
 export const APP_AUTHOR = {
   name: "Nafis Islam Kabbo",

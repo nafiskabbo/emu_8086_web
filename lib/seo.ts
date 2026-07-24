@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { APP_AUTHOR, APP_NAME, APP_TAGLINE, APP_VERSION } from "@/lib/version";
+import {
+  APP_AUTHOR,
+  APP_NAME,
+  APP_REPO_URL,
+  APP_TAGLINE,
+  APP_VERSION,
+} from "@/lib/version";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://emu8086web.vercel.app";
@@ -33,7 +39,7 @@ export const rootMetadata: Metadata = {
   },
   description: APP_TAGLINE,
   applicationName: APP_NAME,
-  authors: [{ name: APP_AUTHOR.name, url: APP_AUTHOR.url }],
+  authors: [{ name: APP_AUTHOR.name, url: APP_AUTHOR.site }],
   creator: APP_AUTHOR.name,
   publisher: APP_AUTHOR.name,
   keywords: siteConfig.keywords,
@@ -42,6 +48,9 @@ export const rootMetadata: Metadata = {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true },
+  },
+  verification: {
+    google: "4b8J6NrWHLMITLuVCfJLqqXJRMLzERtxpjMp6SKuXpc",
   },
   openGraph: {
     type: "website",
@@ -66,3 +75,53 @@ export const rootMetadata: Metadata = {
   manifest: "/site.webmanifest",
   alternates: { canonical: "/" },
 };
+
+/** JSON-LD for SoftwareApplication + Person (product + author sites). */
+export function buildJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        name: APP_NAME,
+        applicationCategory: "EducationalApplication",
+        operatingSystem: "Web",
+        softwareVersion: APP_VERSION,
+        url: siteUrl,
+        description: APP_TAGLINE,
+        author: {
+          "@type": "Person",
+          name: APP_AUTHOR.name,
+          url: APP_AUTHOR.site,
+          sameAs: [
+            APP_AUTHOR.github,
+            APP_AUTHOR.linkedin,
+            APP_AUTHOR.site,
+            APP_REPO_URL,
+          ],
+        },
+        codeRepository: APP_REPO_URL,
+        license: `${APP_REPO_URL}/blob/main/LICENSE`,
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+      },
+      {
+        "@type": "Person",
+        name: APP_AUTHOR.name,
+        email: APP_AUTHOR.email,
+        url: APP_AUTHOR.site,
+        sameAs: [APP_AUTHOR.github, APP_AUTHOR.linkedin],
+      },
+      {
+        "@type": "WebSite",
+        name: APP_NAME,
+        url: siteUrl,
+        description: APP_TAGLINE,
+        author: { "@type": "Person", name: APP_AUTHOR.name, url: APP_AUTHOR.site },
+      },
+    ],
+  };
+}
