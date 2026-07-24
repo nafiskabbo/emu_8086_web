@@ -8,7 +8,7 @@ import {
 } from "@/lib/version";
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://emu8086web.vercel.app";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://emu-8086-web.vercel.app";
 
 export const siteConfig = {
   name: APP_NAME,

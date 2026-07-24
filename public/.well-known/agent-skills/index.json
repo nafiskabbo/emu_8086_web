@@ -5,14 +5,14 @@
       "name": "emu8086web-ide",
       "type": "skill",
       "description": "Use the emu8086web browser IDE to write, assemble, and debug 8086 assembly.",
-      "url": "https://emu8086web.vercel.app/.well-known/agent-skills/ide/SKILL.md",
+      "url": "https://emu-8086-web.vercel.app/.well-known/agent-skills/ide/SKILL.md",
       "sha256": "f1c6a06acd3ac7687eceaff56565b54d7e87a658724f4144bc5fa9f2e26a02ed"
     },
     {
       "name": "emu8086web-share-api",
       "type": "skill",
       "description": "Create and resolve anonymous time-limited ASM share links via the emu8086web Share API.",
-      "url": "https://emu8086web.vercel.app/.well-known/agent-skills/share-api/SKILL.md",
+      "url": "https://emu-8086-web.vercel.app/.well-known/agent-skills/share-api/SKILL.md",
       "sha256": "742a635dfa8389500e86435a55de34615530d6941ecb31b322f45009770a29c6"
     }
   ]

@@ -4,7 +4,7 @@ import { APP_AUTHOR, APP_NAME, APP_REPO_URL, APP_TAGLINE, APP_VERSION } from "@/
 
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://emu8086web.vercel.app";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://emu-8086-web.vercel.app";
 
 function prefersMarkdown(accept: string | null): boolean {
   if (!accept) return false;

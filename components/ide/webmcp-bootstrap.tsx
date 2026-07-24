@@ -52,7 +52,7 @@ export function WebMcpBootstrap() {
           author: APP_AUTHOR.name,
           productSite:
             process.env.NEXT_PUBLIC_SITE_URL ??
-            "https://emu8086web.vercel.app",
+            "https://emu-8086-web.vercel.app",
           authorSite: APP_AUTHOR.site,
         }),
       },

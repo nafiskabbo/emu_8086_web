@@ -4,7 +4,7 @@ Browser-based 8086 assembler and step debugger. A modernization of classic emu80
 
 **Developed by [Nafis Islam Kabbo](https://nafiskabbo.vercel.app/)** · Version **1.2.1** · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
-- Product: [https://emu8086web.vercel.app](https://emu8086web.vercel.app)
+- Product: [https://emu-8086-web.vercel.app](https://emu-8086-web.vercel.app)
 - Portfolio: [https://nafiskabbo.vercel.app](https://nafiskabbo.vercel.app)
 - Source: [https://github.com/nafiskabbo/emu_8086_web](https://github.com/nafiskabbo/emu_8086_web)
 

@@ -19,7 +19,7 @@ Response:
 ```json
 {
   "code": "a1b2c3d4",
-  "url": "https://emu8086web.vercel.app/s/a1b2c3d4",
+  "url": "https://emu-8086-web.vercel.app/s/a1b2c3d4",
   "expiresAt": "2026-07-27T12:00:00.000Z",
   "ttlDays": 3,
   "reused": false

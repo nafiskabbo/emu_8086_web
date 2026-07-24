@@ -17,7 +17,7 @@ emu8086web is an open-source web IDE for writing, assembling, and debugging Inte
 
 ## Primary URLs
 
-- Product (IDE): https://emu8086web.vercel.app/
+- Product (IDE): https://emu-8086-web.vercel.app/
 - Author portfolio: https://nafiskabbo.vercel.app/
 - Author: Nafis Islam Kabbo (https://github.com/nafiskabbo)
 - Source repository: https://github.com/nafiskabbo/emu_8086_web
