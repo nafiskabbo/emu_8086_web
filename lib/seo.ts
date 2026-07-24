@@ -7,8 +7,20 @@ import {
   APP_VERSION,
 } from "@/lib/version";
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://emu-8086-web.vercel.app";
+const DEFAULT_SITE_URL = "https://emu-8086-web.vercel.app";
+/** Old Vercel project slug — remap so share/canonical URLs stay correct. */
+const LEGACY_SITE_URL = "https://emu8086web.vercel.app";
+
+function resolveSiteUrl(): string {
+  const raw = (process.env.NEXT_PUBLIC_SITE_URL ?? DEFAULT_SITE_URL).replace(
+    /\/$/,
+    "",
+  );
+  if (raw === LEGACY_SITE_URL) return DEFAULT_SITE_URL;
+  return raw;
+}
+
+const siteUrl = resolveSiteUrl();
 
 export const siteConfig = {
   name: APP_NAME,
