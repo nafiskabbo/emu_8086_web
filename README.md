@@ -2,7 +2,7 @@
 
 Browser-based 8086 assembler and step debugger. A modernization of classic emu8086 for every platform — write, assemble, and debug MASM-style assembly entirely in your browser.
 
-**Developed by [Nafis Islam Kabbo](https://github.com/nafiskabbo)** · Version **1.1.0** · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
+**Developed by [Nafis Islam Kabbo](https://github.com/nafiskabbo)** · Version **1.1.1** · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
 ![emu8086web logo](public/logo.svg)
 
@@ -28,7 +28,7 @@ Open [http://localhost:3000](http://localhost:3000) — the IDE opens directly.
 - Copy error for AI assistants from the error bar
 - Resizable editor / console / CPU panels; responsive mobile & desktop layout
 - Settings modal (theme, UI scale, editor prefs, accent)
-- Vercel Analytics; manual AdSense placements (Help / Settings / Call stack / bottom anchor)
+- Vercel Analytics; manual AdSense placements (Help / Settings / Call stack / bottom anchor); `ads.txt` + Google CMP for EEA/UK/CH
 
 ## Using the IDE
 

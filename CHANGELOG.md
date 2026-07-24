@@ -2,6 +2,13 @@
 
 All notable changes to emu8086web are documented in this file.
 
+## [1.1.1] — 2026-07-24
+
+### Added
+
+- `ads.txt` at site root (`google.com, pub-4805854422784600, DIRECT, f08c47fec0942fa0`)
+- Site ready for Google Funding Choices CMP (served by existing AdSense tag once published in AdSense Privacy & messaging)
+
 ## [1.1.0] — 2026-07-24
 
 ### Added

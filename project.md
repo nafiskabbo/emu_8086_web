@@ -2,7 +2,7 @@
 
 A browser-based 8086 microprocessor assembler and step debugger — inspired by the classic emu8086 Windows application, rebuilt for the web by **Nafis Islam Kabbo**.
 
-**Version:** 1.1.0
+**Version:** 1.1.1
 
 ## Goals
 
@@ -41,7 +41,7 @@ app/                    Next.js routes
 components/ide/         Debugger UI
 lib/emulator/           Pure TypeScript assembler + interpreter
 lib/ide/                Workspace + React bridge
-public/                 Logo, favicon, llms.txt, manifest
+public/                 Logo, favicon, ads.txt, llms.txt, manifest
 ```
 
 Interpretive engine: source → instruction list → execute. Flat teaching memory model (`@data` → 0).

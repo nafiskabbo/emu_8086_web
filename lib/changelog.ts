@@ -8,6 +8,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.1.1",
+    date: "2026-07-24",
+    highlights: [
+      "ads.txt at site root for AdSense authorization",
+      "Google CMP consent messaging ready via existing AdSense tag (EEA/UK/CH)",
+    ],
+  },
+  {
     version: "1.1.0",
     date: "2026-07-24",
     highlights: [
