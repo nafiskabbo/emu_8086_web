@@ -56,7 +56,7 @@ bun install                 # install web + Electron dependencies
 bun run electron:dev        # live desktop window against `next dev` (development)
 bun run electron:build      # web production build + stage the standalone server
 bun run electron:dist:mac   # package the DMG for this Mac (calls electron:build first)
-bun run electron:dist:mac-all  # DMGs for both arm64 and x64
+bun run electron:dist:mac-all  # DMGs (+ zips for auto-update) for both arm64 and x64
 ```
 
 ### Notes

@@ -35,7 +35,7 @@
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:build": "bun run build && node scripts/prepare-electron.mjs",
     "electron:dist:mac": "bun run electron:build && electron-builder --mac dmg --publish never",
-    "electron:dist:mac-all": "bun run electron:build && electron-builder --mac dmg --arm64 --x64 --publish never",
+    "electron:dist:mac-all": "bun run electron:build && electron-builder --mac dmg zip --arm64 --x64 --publish never",
     "electron:publish:mac": "bun run electron:build && electron-builder --mac dmg zip --arm64 --x64 --publish always",
     "dist:mac": "bun run electron:dist:mac",
     "prepare": "husky",
