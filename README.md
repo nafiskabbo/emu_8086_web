@@ -2,7 +2,7 @@
 
 Browser-based 8086 assembler and step debugger. A modernization of classic emu8086 for every platform — write, assemble, and debug MASM-style assembly entirely in your browser.
 
-**Developed by [Nafis Islam Kabbo](https://nafiskabbo.vercel.app/)** · Version **1.2.6** · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
+**Developed by [Nafis Islam Kabbo](https://nafiskabbo.vercel.app/)** · Version **1.3.0** · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
 - Product: [https://emu-8086-web.vercel.app](https://emu-8086-web.vercel.app)
 - Portfolio: [https://nafiskabbo.vercel.app](https://nafiskabbo.vercel.app)
@@ -30,8 +30,52 @@ Open [http://localhost:3000](http://localhost:3000) — the IDE opens directly.
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key (optional for future client use) |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Server-only** — Share API (never commit / never `NEXT_PUBLIC_`) |
+| `NEXT_PUBLIC_ENABLE_ADS` | `1` to show AdSense units, anything else (or unset) hides them. **Default off** — applies to web and desktop builds |
 
 Run the `shared_programs` SQL from the 1.2.0 release notes / plan in the Supabase SQL editor (RLS on, service role only, hourly cleanup cron).
+
+## Desktop (Electron, offline macOS build)
+
+The same codebase ships as an offline macOS app. The packaged app starts its own bundled Next server on loopback (`127.0.0.1`), so assembling, stepping, running, and file save/open work with no internet. Short share links stay disabled while offline (they need the hosted API).
+
+Requires macOS with Xcode command-line tools (`xcode-select --install`) for code signing utilities. No paid Apple Developer account is needed for local builds; the DMG will be unsigned, so first launch needs right-click → Open.
+
+### Easy command
+
+```bash
+bun install
+bun run dist:mac
+```
+
+Open the DMG under `dist/` (e.g. `dist/emu8086web-1.3.0-arm64.dmg`), drag the app to Applications, and launch it. On Apple silicon this builds `arm64`; on Intel Macs it builds `x64`.
+
+### Step by step (same thing, explicit)
+
+```bash
+bun install                 # install web + Electron dependencies
+bun run electron:dev        # live desktop window against `next dev` (development)
+bun run electron:build      # web production build + stage the standalone server
+bun run electron:dist:mac   # package the DMG for this Mac (calls electron:build first)
+bun run electron:dist:mac-all  # DMGs for both arm64 and x64
+```
+
+### Notes
+
+- Output lands in `dist/` (git-ignored): `.dmg` installer plus a `.zip` for direct distribution.
+- Unsigned builds show “unidentified developer” on first launch: right-click → Open → Open. Distributing beyond your own machines needs an Apple Developer ID + notarization (not set up in this repo).
+- Fonts and Vercel Analytics are inert without internet; the IDE itself is unaffected. Ads stay off unless `NEXT_PUBLIC_ENABLE_ADS=1` is set at build time (web and desktop alike).
+- The web deployment is unchanged — `output: "standalone"` in `next.config.ts` also works on Vercel.
+
+### Desktop menu, updates, and releases
+
+- The app menu carries File (New/Open/Save/Save As), Assemble (Compile/Run/Pause/Step/Reset), standard Edit roles, View zoom/reload, Window, and Help (shortcuts, ASCII codes, converter, issue tracker, GitHub) — all wired into the IDE.
+- Auto-update: the packaged app checks GitHub Releases after launch and offers a restart when a newer version is downloaded; “Check for Updates…” lives in the app menu. Publishing a release is one tag: `git tag v1.3.0 && git push origin v1.3.0` — the `release-desktop` workflow builds arm64 + x64 DMGs and attaches them to the release. Until Developer ID signing + notarization are configured, macOS installs the update from the downloaded DMG manually.
+
+### Troubleshooting (desktop)
+
+- `sandbox_extension_issue_file … Operation not permitted`: dev-only macOS sandbox denial. `electron:dev` already passes `--no-sandbox`; packaged builds keep the sandbox on.
+- Window loads but buttons do nothing: stale dev server or blocked dev resources. Stop everything, rerun `bun run electron:dev`, and wait for “Ready” in the terminal before clicking. (`allowedDevOrigins` already covers the loopback host.)
+- For exam-day confidence, test the packaged artifact itself (`bun run dist:mac` → install the DMG), not just the dev window — dev-only issues above do not apply to it.
 
 ## Features
 
@@ -125,8 +169,10 @@ bun dev            # Development server
 bun run build      # Production build
 bun run lint       # ESLint
 bun run typecheck  # TypeScript
-bun test           # Emulator unit tests
+bun test           # Emulator + offline-helper + ads-flag unit tests (`lib/`, `electron/`)
 bun run verify     # lint + typecheck + test + build
+bun run electron:dev      # Desktop window against `next dev`
+bun run dist:mac          # Offline macOS DMG (this Mac's architecture)
 ```
 
 ## Contributing

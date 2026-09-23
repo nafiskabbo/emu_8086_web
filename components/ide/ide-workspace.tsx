@@ -24,6 +24,7 @@ import { ShareDialog } from "@/components/ide/share-dialog";
 import { Toolbar } from "@/components/ide/toolbar";
 import { WebMcpBootstrap } from "@/components/ide/webmcp-bootstrap";
 import { useEmulator } from "@/lib/ide/use-emulator";
+import { isAdsEnabled } from "@/lib/adsense";
 import {
   applyAccent,
   FONT_SCALE_KEY,
@@ -391,6 +392,44 @@ export function IdeWorkspace() {
     showToast(`Loaded sample: ${key}`);
   };
 
+  // Native desktop menu (Electron shell) → IDE actions.
+  // Action ids match electron/menu.js MENU_CHANNEL payloads.
+  const menuHandlers = useRef<Record<string, () => void>>({});
+  useEffect(() => {
+    menuHandlers.current = {
+      "file:new": () => newFile(),
+      "file:open": () => handleOpen(),
+      "file:save": () => handleSave(),
+      "file:save-as": () => handleSaveAs(),
+      "emu:assemble": () => {
+        if (hasFiles) emu.doAssemble();
+      },
+      "emu:run": () => emu.doRun(),
+      "emu:pause": () => emu.doPause(),
+      "emu:step": () => emu.doStep(),
+      "emu:reset": () => emu.doReset(),
+      "help:shortcuts": () =>
+        window.dispatchEvent(
+          new CustomEvent(OPEN_HELP_EVENT, { detail: { panel: "shortcuts" } }),
+        ),
+      "help:ascii": () =>
+        window.dispatchEvent(
+          new CustomEvent(OPEN_HELP_EVENT, { detail: { panel: "ascii" } }),
+        ),
+      "help:convert": () =>
+        window.dispatchEvent(
+          new CustomEvent(OPEN_HELP_EVENT, { detail: { panel: "convert" } }),
+        ),
+    };
+  });
+
+  useEffect(() => {
+    const off = window.electronAPI?.onMenuAction?.((action) => {
+      menuHandlers.current[action]?.();
+    });
+    return off;
+  }, []);
+
   const jumpToError = useCallback(() => {
     if (!errorLine || !editorWrapRef.current) return;
     const ta = editorWrapRef.current.querySelector("textarea");
@@ -716,9 +755,11 @@ export function IdeWorkspace() {
               onHexBaseChange={emu.setHexBase}
             />
             <StackPanels machine={machine} />
-            <div className="mt-2 hidden border-t border-line px-2 py-2 lg:block">
-              <AdSenseUnit slot={AD_SLOTS.banner2} compact />
-            </div>
+            {isAdsEnabled() ? (
+              <div className="mt-2 hidden border-t border-line px-2 py-2 lg:block">
+                <AdSenseUnit slot={AD_SLOTS.banner2} compact />
+              </div>
+            ) : null}
           </div>
         </div>
       )}
@@ -739,7 +780,7 @@ export function IdeWorkspace() {
         source={emu.source}
         onToast={showToast}
       />
-      <AdSenseAnchor slot={AD_SLOTS.banner1} />
+      {isAdsEnabled() ? <AdSenseAnchor slot={AD_SLOTS.banner1} /> : null}
       <Toast message={toast} />
     </div>
   );

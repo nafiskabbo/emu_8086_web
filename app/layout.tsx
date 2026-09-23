@@ -1,6 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
-import { ADSENSE_CLIENT } from "@/lib/adsense";
+import { ADSENSE_CLIENT, isAdsEnabled } from "@/lib/adsense";
 import { buildJsonLd, rootMetadata } from "@/lib/seo";
 import { IBM_Plex_Mono, IBM_Plex_Sans, VT323 } from "next/font/google";
 import "./globals.css";
@@ -25,9 +25,13 @@ const vt323 = VT323({
 
 export const metadata = {
   ...rootMetadata,
-  other: {
-    "google-adsense-account": ADSENSE_CLIENT,
-  },
+  ...(isAdsEnabled()
+    ? {
+        other: {
+          "google-adsense-account": ADSENSE_CLIENT,
+        },
+      }
+    : {}),
 };
 
 export default function RootLayout({
@@ -58,11 +62,12 @@ export default function RootLayout({
           href="/"
           title="Markdown for Agents"
         />
-        <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
-        <meta
-          name="google-site-verification"
+        <meta name="google-site-verification"
           content="4b8J6NrWHLMITLuVCfJLqqXJRMLzERtxpjMp6SKuXpc"
         />
+        {isAdsEnabled() ? (
+          <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
+        ) : null}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -70,12 +75,14 @@ export default function RootLayout({
       </head>
       <body className="flex min-h-full flex-col overflow-x-hidden">
         {children}
-        <Script
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        {isAdsEnabled() ? (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        ) : null}
         <Analytics />
       </body>
     </html>

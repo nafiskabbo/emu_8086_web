@@ -7,6 +7,14 @@ const linkHeader = [
 ].join(", ");
 
 const nextConfig: NextConfig = {
+  // Standalone server output feeds the offline Electron shell
+  // (`electron/dist:mac` forks `.next/standalone/server.js`).
+  // Vercel continues to deploy from the same build.
+  output: "standalone",
+  // The Electron dev shell loads the app over loopback (127.0.0.1), which
+  // Next treats as cross-origin for dev resources (HMR + client chunks).
+  // Without this, hydration stalls and clicks do nothing in `electron:dev`.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   async headers() {
     return [
       {

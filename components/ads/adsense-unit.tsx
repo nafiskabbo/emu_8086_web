@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ADSENSE_CLIENT } from "@/lib/adsense";
+import { ADSENSE_CLIENT, isAdsEnabled } from "@/lib/adsense";
 
 export { ADSENSE_CLIENT, AD_SLOTS } from "@/lib/adsense";
 
@@ -99,6 +99,9 @@ export function AdSenseUnit({
     };
   }, []);
 
+  // Feature flag is read after hooks so hook order stays stable.
+  // When ads are off, render nothing — no reserved empty box.
+  if (!isAdsEnabled()) return null;
   if (fill === "empty") return null;
 
   const sizeClass =
@@ -133,6 +136,7 @@ export function AdSenseAnchor({ slot }: { slot: string }) {
     };
   }, [filled]);
 
+  if (!isAdsEnabled()) return null;
   if (checked && !filled) return null;
 
   return (

@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { DialogShell } from "@/components/ide/dialog-shell";
+import {
+  isElectronRenderer,
+  shouldDisableShare,
+} from "@/lib/electron/offline";
 import {
   SHARE_TTL_DAYS,
   type ShareTtlDays,
@@ -37,6 +41,23 @@ function ShareDialogBody({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CreateResult | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [online, setOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+
+  // Short links are server-backed: disable the action while offline so the
+  // desktop build (and offline browsers) fail with guidance, not a fetch error.
+  const shareDisabled = shouldDisableShare(online);
 
   const generate = async () => {
     setBusy(true);
@@ -109,7 +130,7 @@ function ShareDialogBody({
             <button
               type="button"
               className="btn btn-primary"
-              disabled={busy || !source.trim()}
+              disabled={busy || !source.trim() || shareDisabled}
               onClick={() => void generate()}
             >
               {busy ? "Generating…" : "Generate share link"}
@@ -151,6 +172,13 @@ function ShareDialogBody({
             Max expiry is 7 days. Identical programs reuse the same short code
             while still valid.
           </p>
+          {shareDisabled ? (
+            <p className="text-xs text-amber" role="alert">
+              {isElectronRenderer()
+                ? "Short links need the internet — unavailable in this offline build. Assembling, running, and saving still work."
+                : "You are offline — short links need an internet connection. Assembling and running still work."}
+            </p>
+          ) : null}
           {error ? (
             <p className="text-xs text-red-400" role="alert">
               {error}

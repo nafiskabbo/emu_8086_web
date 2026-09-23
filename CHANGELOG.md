@@ -2,6 +2,28 @@
 
 All notable changes to emu8086web are documented in this file.
 
+## [1.3.0] — 2026-09-23
+
+### Added
+
+- Offline macOS desktop build via Electron (`electron/main.js` + `preload.js`): the packaged app forks the bundled Next standalone server on loopback, so assembling, running, stepping, and file save work with no internet
+- One-command local builds: `bun run dist:mac` (current Apple-silicon/Intel arch) and `bun run electron:dist:mac-all` (arm64 + x64 DMGs); `bun run electron:dev` for live desktop development
+- Offline helpers (`lib/electron/offline.ts`) with unit tests: Electron detection, loopback URL/health-check builders, port normalization, share gating
+- Share dialog goes offline-aware: the Generate action disables with guidance while offline instead of failing on a network error
+- Ads feature flag (`NEXT_PUBLIC_ENABLE_ADS`, default OFF): all AdSense units, the anchor bar, and the ads script/meta render only when enabled — no empty ad boxes on web or desktop
+- Native desktop menu: emu8086web app menu (About, Check for Updates), File (New/Open/Save/Save As), Assemble (Compile/Run/Pause/Step/Reset), standard Edit roles, View zoom/reload, Window, and Help (shortcuts, ASCII, converter, issue tracker) wired into the IDE
+- Branded macOS app icon (`assets/icon.icns`, generated from `public/logo.svg`)
+- In-app auto-update (electron-updater + GitHub Releases): background check after launch, restart prompt when ready, manual “Check for Updates…” in the menu
+- `release-desktop` GitHub workflow: push a `v*` tag to build arm64 + x64 DMGs and attach them to the release for the updater
+
+### Fixed
+
+- Electron dev shell on macOS: allow loopback dev origins (HMR + client chunks load, clicks work) and launch dev Electron with `--no-sandbox` (sandboxed dev Helper file access is denied); packaged builds stay sandboxed
+
+### Notes
+
+- Seamless auto-install on macOS needs Developer ID signing + notarization; until then the updater downloads and the user reinstalls from the DMG
+
 ## [1.2.6] — 2026-09-23
 
 ### Fixed

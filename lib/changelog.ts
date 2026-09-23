@@ -8,6 +8,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.3.0",
+    date: "2026-09-23",
+    highlights: [
+      "Offline macOS desktop build via Electron (loopback standalone server)",
+      "One-command builds: bun run dist:mac; live desktop dev: bun run electron:dev",
+      "Share dialog disables gracefully while offline",
+      "Ads behind a flag (NEXT_PUBLIC_ENABLE_ADS, default off)",
+      "Native desktop menu: File, Assemble, Edit, View, Window, Help",
+      "Branded macOS app icon + in-app auto-update from GitHub Releases",
+    ],
+  },
+  {
     version: "1.2.6",
     date: "2026-09-23",
     highlights: [

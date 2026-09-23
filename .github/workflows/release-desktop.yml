@@ -1,0 +1,56 @@
+# Desktop release: builds the offline macOS app and attaches the
+# installers to a GitHub Release. The in-app auto-updater
+# (electron-updater) reads these releases to offer updates.
+#
+# Trigger: push a version tag (e.g. `git tag v1.3.0 && git push origin v1.3.0`)
+# or run manually from the Actions tab (workflow_dispatch).
+#
+# Unsigned local signing is used (CSC_IDENTITY_AUTO_DISCOVERY=false).
+# For seamless auto-install on macOS, add Developer ID signing +
+# notarization secrets later: APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD,
+# APPLE_TEAM_ID, CSC_LINK, CSC_KEY_PASSWORD.
+
+name: release-desktop
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Ensure a published release exists for this tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual run: skipping release creation (artifacts only)."
+            exit 0
+          fi
+          gh release view "${{ github.ref_name }}" >/dev/null 2>&1 || \
+            gh release create "${{ github.ref_name }}" \
+              --title "${{ github.ref_name }}" \
+              --generate-notes
+
+      - name: Build and publish macOS installers
+        run: bun run electron:publish:mac
+
+      - name: Publish the release (exit draft)
+        if: github.event_name != 'workflow_dispatch'
+        run: gh release edit "${{ github.ref_name }}" --draft=false || true
