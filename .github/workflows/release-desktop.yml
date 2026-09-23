@@ -37,20 +37,25 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Ensure a published release exists for this tag
+      - name: Build macOS installers
+        # NOTE: --publish never on purpose. electron-builder only uploads
+        # into draft releases and skips every file when the release is
+        # already published — so assets are uploaded with `gh` below.
+        run: bun run electron:dist:mac-all
+
+      - name: Create the GitHub Release if missing
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual run: skipping release creation (artifacts only)."
-            exit 0
+          TAG="v$(node -p "require('./package.json').version")"
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --title "$TAG" --generate-notes
+
+      - name: Upload installers to the release
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          shopt -s nullglob
+          FILES=(dist/*.dmg dist/*.zip dist/latest-mac.yml)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No installer artifacts found in dist/" >&2
+            exit 1
           fi
-          gh release view "${{ github.ref_name }}" >/dev/null 2>&1 || \
-            gh release create "${{ github.ref_name }}" \
-              --title "${{ github.ref_name }}" \
-              --generate-notes
-
-      - name: Build and publish macOS installers
-        run: bun run electron:publish:mac
-
-      - name: Publish the release (exit draft)
-        if: github.event_name != 'workflow_dispatch'
-        run: gh release edit "${{ github.ref_name }}" --draft=false || true
+          gh release upload "$TAG" "${FILES[@]}" --clobber
